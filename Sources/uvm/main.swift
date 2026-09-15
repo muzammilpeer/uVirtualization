@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import Virtualization
 import UVCore
 
 func printJSON<T: Encodable>(_ value: T) throws {
@@ -35,13 +36,15 @@ func run() async throws {
         guard rest.count == 1 else { throw UVError("Usage: uvm inspect NAME") }
         try printJSON(store.load(rest[0]))
     case "run":
-        let args = try Arguments(rest, values: ["--dir", "--bridge", "--disk"], flags: ["--headless", "--audio", "--clipboard"], repeated: ["--dir", "--disk"])
+        let args = try Arguments(rest, values: ["--dir", "--bridge", "--disk"], flags: ["--headless", "--audio", "--clipboard", "--serial", "--rosetta"], repeated: ["--dir", "--disk"])
         try args.require(1)
         var options = RuntimeOptions()
         options.directories = try (args.options["--dir"] ?? []).map { try DirectoryMount($0) }
         options.bridge = args.value("--bridge")
         options.audio = args.value("--audio") != nil
         options.clipboard = args.value("--clipboard") != nil
+        options.serial = args.value("--serial") != nil
+        options.rosetta = args.value("--rosetta") != nil
         options.additionalDisks = (args.options["--disk"] ?? []).map { URL(fileURLWithPath: $0) }
         let runner = try VMRunner(store: store, name: args.positional[0], options: options)
         signal(SIGINT, SIG_IGN)
@@ -112,9 +115,22 @@ func run() async throws {
         guard rest.count == 2 else { throw UVError("Usage: uvm import FILE.uvma NAME") }
         try VMArchive.importVM(store: store, from: URL(fileURLWithPath: rest[0]), name: rest[1])
         try printJSON(store.load(rest[1]))
+    case "install-rosetta":
+        guard rest.isEmpty else { throw UVError("install-rosetta takes no arguments.") }
+        #if arch(arm64)
+        try await VZLinuxRosettaDirectoryShare.installRosetta()
+        #else
+        throw UVError("Rosetta requires Apple silicon.")
+        #endif
     case "create":
-        let args = try Arguments(rest, values: ["--from-ipsw", "--cpu", "--memory", "--disk"])
+        let args = try Arguments(rest, values: ["--from-ipsw", "--cpu", "--memory", "--disk"], flags: ["--linux"])
         let model = try args.model()
+        if args.value("--linux") != nil {
+            guard args.value("--from-ipsw") == nil else { throw UVError("Choose --linux or --from-ipsw.") }
+            try LinuxInstaller.create(store: store, model: model)
+            try printJSON(store.load(model.name))
+            return
+        }
         guard let ipsw = args.value("--from-ipsw") else { throw UVError("Usage: uvm create NAME --from-ipsw PATH|latest") }
         let installer = MacInstaller()
         signal(SIGINT, SIG_IGN)
@@ -158,6 +174,9 @@ Usage: uvm COMMAND
   status NAME                    Report runtime state
   stop NAME [--force]             Request shutdown or force stop
   pause NAME / resume NAME        Control execution
+  create NAME --linux [--disk GiB]
+                                 Prepare an ARM64 EFI guest for ISO installation
+  install-rosetta                Install Apple Rosetta support for Linux guests
   create NAME --from-ipsw PATH|latest
                                  Install macOS from a restore image
   doctor                         Report host capabilities as JSON

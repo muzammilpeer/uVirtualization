@@ -14,6 +14,7 @@ public enum VirtualMachineFactory {
               memory <= VZVirtualMachineConfiguration.maximumAllowedMemorySize else { throw UVError("Memory is outside guest/host limits.") }
         config.cpuCount = model.cpuCount
         config.memorySize = memory
+        if model.guest == "macOS" {
         #if arch(arm64)
         let platform = VZMacPlatformConfiguration()
         guard let hardware = VZMacHardwareModel(dataRepresentation: try Data(contentsOf: directory.appendingPathComponent("hardware.bin"))), hardware.isSupported,
@@ -31,6 +32,22 @@ public enum VirtualMachineFactory {
         #else
         throw UVError("macOS guests require Apple silicon.")
         #endif
+        } else {
+            let platform = VZGenericPlatformConfiguration()
+            config.platform = platform
+            let boot = VZEFIBootLoader()
+            boot.variableStore = VZEFIVariableStore(url: directory.appendingPathComponent("efi.bin"))
+            config.bootLoader = boot
+            let graphics = VZVirtioGraphicsDeviceConfiguration()
+            graphics.scanouts = [VZVirtioGraphicsScanoutConfiguration(widthInPixels: model.displayWidth, heightInPixels: model.displayHeight)]
+            config.graphicsDevices = [graphics]
+            config.memoryBalloonDevices = [VZVirtioTraditionalMemoryBalloonDeviceConfiguration()]
+            if options.serial {
+                let serial = VZVirtioConsoleDeviceSerialPortConfiguration()
+                serial.attachment = VZFileHandleSerialPortAttachment(fileHandleForReading: .standardInput, fileHandleForWriting: .standardOutput)
+                config.serialPorts = [serial]
+            }
+        }
         let attachment = try VZDiskImageStorageDeviceAttachment(url: directory.appendingPathComponent("disk.img"), readOnly: false)
         config.storageDevices = [VZVirtioBlockDeviceConfiguration(attachment: attachment)]
         let network = VZVirtioNetworkDeviceConfiguration()
@@ -44,6 +61,17 @@ public enum VirtualMachineFactory {
         config.pointingDevices = [VZUSBScreenCoordinatePointingDeviceConfiguration()]
         config.entropyDevices = [VZVirtioEntropyDeviceConfiguration()]
         try apply(options, to: config)
+        if options.rosetta {
+            guard model.guest == "linux" else { throw UVError("Rosetta sharing is for Linux guests.") }
+            #if arch(arm64)
+            guard VZLinuxRosettaDirectoryShare.availability == .installed else { throw UVError("Rosetta is not installed. Run uvm install-rosetta before using --rosetta.") }
+            let device = VZVirtioFileSystemDeviceConfiguration(tag: "rosetta")
+            device.share = try VZLinuxRosettaDirectoryShare()
+            config.directorySharingDevices.append(device)
+            #else
+            throw UVError("Rosetta requires Apple silicon.")
+            #endif
+        }
         try config.validate()
         return config
     }

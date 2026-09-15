@@ -11,7 +11,7 @@ Work sequentially. Each sprint ends with build/test evidence and an honest statu
 | 05 | Network and devices | NAT/IP, directory sharing, display/audio, bridged capability checks | Implemented; guest acceptance pending |
 | 06 | OCI pull and compatibility | Verify digest, stream layers, clone and boot a pinned Tart image | Implemented; registry boot acceptance pending |
 | 07 | OCI publishing and cache | Keychain auth, push, retries, cancellation, prune under concurrent use | Implemented; private registry acceptance pending |
-| 08 | ARM Linux | ISO install, EFI persistence, serial console, guest-specific devices | Planned |
+| 08 | ARM Linux | ISO install, EFI persistence, serial console, guest-specific devices | Implemented; distribution install acceptance pending |
 | 09 | Native app | Shared library, wizard, settings, VM windows, lifecycle errors | Planned |
 | 10 | Automation and parity audit | Version-pinned Tart command matrix, JSON/completions, CI examples; close gaps | Planned |
 | 11 | Release engineering | M1 hardware suite, signed/notarized artifacts, Homebrew recipe and upgrade tests | Planned |
@@ -57,3 +57,7 @@ Implemented OCI reference validation, anonymous bearer authentication, HTTPS red
 ## Sprint 07 implementation — 2026-09-16
 
 Added Keychain login/logout and host-scoped environment credentials, native compressed OCI publishing, chunked upload recovery and locked cache pruning. Nineteen tests pass. Real public Tahoe manifest inspection succeeded at digest `sha256:1b093499716409d29e8b5336844528e1cae375db97d2ad8e5aeff78cf0da201e`. Native pushes use uVirtualization media types; Tart-compatible push encoding is not yet implemented. Private registry publishing needs credentialed acceptance.
+
+## Sprint 08 implementation — 2026-09-16
+
+Added Linux EFI machine creation, virtio graphics/balloon, ISO attachment, serial I/O and optional Rosetta directory sharing with explicit installation command. Nineteen tests pass. Signed hardware smoke test on this arm64 host successfully created a blank EFI VM, started it, paused/resumed it, forced stop and verified stopped status. This verifies runtime control, not a Linux distribution installation.
