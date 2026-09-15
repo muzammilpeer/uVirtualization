@@ -6,7 +6,7 @@ Work sequentially. Each sprint ends with build/test evidence and an honest statu
 |---|---|---|---|
 | 01 | Swift package, shared models, local config store, CLI, diagnostics | Build and persistence/validation tests pass; CLI smoke test | Complete |
 | 02 | macOS IPSW installation | Signed installer creates boot artifacts; failures/cancellation recover safely | Implemented; guest acceptance pending |
-| 03 | Runtime and VM window | Boot, interact, graceful/force stop, ownership lock and status verified on hardware | Planned |
+| 03 | Runtime and VM window | Boot, interact, graceful/force stop, ownership lock and status verified on hardware | Implemented; guest acceptance pending |
 | 04 | Local operations | Offline configure/clone/rename/delete, sparse disk growth, archive safety | Planned |
 | 05 | Network and devices | NAT/IP, directory sharing, display/audio, bridged capability checks | Planned |
 | 06 | OCI pull and compatibility | Verify digest, stream layers, clone and boot a pinned Tart image | Planned |
@@ -37,3 +37,7 @@ Add `create NAME --from-ipsw PATH|latest`; validate available disk and Apple res
 ## Sprint 02 implementation — 2026-09-16
 
 Implemented local/latest IPSW installation, platform artifacts, sparse disks, staging/failure records, progress/cancellation, ownership locks and development signing scripts. Eight unit tests pass. Ad-hoc signature verifies. Signed doctor outside the execution sandbox reports virtualization supported; inside the sandbox it reports unavailable. Actual installation acceptance follows runtime implementation. User requested development signing until release credentials are supplied at the final build.
+
+## Sprint 03 implementation — 2026-09-16
+
+Added VZ runtime, native guest window, headless mode, lifecycle commands, session-scoped control requests and runtime ownership. Ten tests pass, including stale-status and stopped-guest control checks. Guest boot/input/shutdown acceptance is pending a restore image installation.
