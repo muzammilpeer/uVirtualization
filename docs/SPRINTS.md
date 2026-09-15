@@ -10,7 +10,7 @@ Work sequentially. Each sprint ends with build/test evidence and an honest statu
 | 04 | Local operations | Offline configure/clone/rename/delete, sparse disk growth, archive safety | Implemented; guest acceptance pending |
 | 05 | Network and devices | NAT/IP, directory sharing, display/audio, bridged capability checks | Implemented; guest acceptance pending |
 | 06 | OCI pull and compatibility | Verify digest, stream layers, clone and boot a pinned Tart image | Implemented; registry boot acceptance pending |
-| 07 | OCI publishing and cache | Keychain auth, push, retries, cancellation, prune under concurrent use | Planned |
+| 07 | OCI publishing and cache | Keychain auth, push, retries, cancellation, prune under concurrent use | Implemented; private registry acceptance pending |
 | 08 | ARM Linux | ISO install, EFI persistence, serial console, guest-specific devices | Planned |
 | 09 | Native app | Shared library, wizard, settings, VM windows, lifecycle errors | Planned |
 | 10 | Automation and parity audit | Version-pinned Tart command matrix, JSON/completions, CI examples; close gaps | Planned |
@@ -53,3 +53,7 @@ Added NAT lease discovery with timeout, read-only-by-default directory shares, o
 ## Sprint 06 implementation — 2026-09-16
 
 Implemented OCI reference validation, anonymous bearer authentication, HTTPS redirects without cross-origin credentials, bounded manifests, disk-backed blob downloads, SHA-256 verification, reusable verified blob cache, Tart v1 config/raw LZ4 v2 disk adapter, native image import, remote clone and manifest inspection. Eighteen tests pass including decompression bounds. Retry resumes at verified blob boundaries; partial-blob byte resumption remains a release gap. Registry guest boot acceptance is pending.
+
+## Sprint 07 implementation — 2026-09-16
+
+Added Keychain login/logout and host-scoped environment credentials, native compressed OCI publishing, chunked upload recovery and locked cache pruning. Nineteen tests pass. Real public Tahoe manifest inspection succeeded at digest `sha256:1b093499716409d29e8b5336844528e1cae375db97d2ad8e5aeff78cf0da201e`. Native pushes use uVirtualization media types; Tart-compatible push encoding is not yet implemented. Private registry publishing needs credentialed acceptance.

@@ -30,3 +30,21 @@ final class RegistryTests: XCTestCase {
         XCTAssertTrue(OCIReference.validDigest(FileDigest.sha256(Data())))
     }
 }
+
+final class RegistryCacheTests: XCTestCase {
+    func testPruneHonorsOwnershipAndPreservesVMs() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = VMStore(root: root)
+        try store.create(VMConfiguration(name: "local"))
+        let blobs = root.appendingPathComponent(".cache/blobs")
+        try FileManager.default.createDirectory(at: blobs, withIntermediateDirectories: true)
+        try Data("cached".utf8).write(to: blobs.appendingPathComponent("blob"))
+        let lock = try FileLock(url: root.appendingPathComponent(".cache/ownership.lock"))
+        XCTAssertThrowsError(try RegistryImages.prune(store: store))
+        lock.unlock()
+        try RegistryImages.prune(store: store)
+        XCTAssertEqual(try store.load("local").name, "local")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: blobs.path))
+    }
+}

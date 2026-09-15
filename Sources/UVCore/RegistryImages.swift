@@ -47,6 +47,14 @@ public enum RegistryImages {
                 let filename = layer.mediaType.contains("config") ? "tart.json" : "nvram.bin"
                 guard seen.insert(filename).inserted, layer.size <= 16_777_216 else { throw UVError("Duplicate or oversized metadata layer.") }
                 try FileManager.default.copyItem(at: blob, to: stage.appendingPathComponent(filename))
+            case "application/vnd.uvirtualization.disk.v2":
+                guard !isTart, let text = layer.annotations?["org.uvirtualization.uncompressed-size"], let size = UInt64(text), size > 0, size <= 1_073_741_824,
+                      let expected = layer.annotations?["org.uvirtualization.uncompressed-digest"] else { throw UVError("Invalid native compressed layer.") }
+                let url = stage.appendingPathComponent("disk.img")
+                if diskOffset == 0 { try SparseDisk.create(at: url, bytes: 1) }
+                guard try decompress(blob, to: url, offset: diskOffset, expectedSize: size) == expected else { throw UVError("Uncompressed digest mismatch.") }
+                diskOffset += size
+                guard diskOffset <= 1_099_511_627_776 else { throw UVError("Image exceeds 1 TiB import limit.") }
             case "application/vnd.uvirtualization.disk.v1":
                 guard !isTart, layer.size > 0 else { throw UVError("Invalid native disk layer.") }
                 let url = stage.appendingPathComponent("disk.img")

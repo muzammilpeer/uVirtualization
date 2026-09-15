@@ -61,6 +61,21 @@ func run() async throws {
         guard rest.count == 1 || (command == "stop" && rest.count == 2 && rest[1] == "--force") else { throw UVError("Usage: uvm \(command) NAME" + (command == "stop" ? " [--force]" : "")) }
         try await RuntimeControl.send(store: store, name: rest[0], command: rest.contains("--force") ? "force-stop" : command)
         try printJSON(RuntimeControl.status(store: store, name: rest[0]))
+    case "login":
+        let args = try Arguments(rest, values: ["--username"], flags: ["--password-stdin"])
+        try args.require(1)
+        guard let user = args.value("--username"), args.value("--password-stdin") != nil else { throw UVError("Usage: uvm login HOST --username USER --password-stdin") }
+        let password = String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self).trimmingCharacters(in: .newlines)
+        try RegistryCredentials.save(host: args.positional[0], credential: RegistryCredential(username: user, password: password))
+    case "logout":
+        guard rest.count == 1 else { throw UVError("Usage: uvm logout HOST") }
+        try RegistryCredentials.delete(host: rest[0])
+    case "push":
+        guard rest.count == 2 else { throw UVError("Usage: uvm push NAME REGISTRY/IMAGE:TAG") }
+        try await RegistryImages.push(store: store, name: rest[0], reference: OCIReference(rest[1])) { message in FileHandle.standardError.write(Data((message + "\n").utf8)) }
+    case "prune":
+        guard rest == ["--all"] else { throw UVError("Usage: uvm prune --all (removes cached registry data only)") }
+        try RegistryImages.prune(store: store)
     case "image-info":
         guard rest.count == 1 else { throw UVError("Usage: uvm image-info REGISTRY/IMAGE:TAG") }
         let client = RegistryClient(reference: try OCIReference(rest[0]))
@@ -126,6 +141,11 @@ uVirtualization — Swift VM manager (foundation preview)
 
 Usage: uvm COMMAND
   set NAME [--cpu N] [--memory MiB] [--disk GiB] [--width N] [--height N]
+  login HOST --username USER --password-stdin
+  logout HOST
+  push NAME REGISTRY/IMAGE:TAG    Publish a stopped VM
+  prune --all                    Remove registry cache
+  image-info REGISTRY/IMAGE:TAG   Inspect remote manifest
   pull REGISTRY/IMAGE:TAG         Cache a verified VM image
   clone SOURCE DESTINATION       Clone a stopped local VM
   rename SOURCE DESTINATION      Rename a stopped VM
