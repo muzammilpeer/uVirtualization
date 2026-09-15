@@ -7,7 +7,8 @@ func printJSON<T: Encodable>(_ value: T) throws {
     print(String(decoding: try encoder.encode(value), as: UTF8.self))
 }
 
-func run() throws {
+@MainActor
+func run() async throws {
     let arguments = Array(CommandLine.arguments.dropFirst())
     let store = VMStore(root: VMStore.defaultRoot)
     guard let command = arguments.first else { print(help); return }
@@ -31,6 +32,18 @@ func run() throws {
         try printJSON(store.list())
     case "inspect":
         guard rest.count == 1 else { throw UVError("Usage: uvm inspect NAME") }
+        try printJSON(store.load(rest[0]))
+    case "create":
+        guard rest.count == 3, rest[1] == "--from-ipsw" else { throw UVError("Usage: uvm create NAME --from-ipsw PATH|latest") }
+        let installer = MacInstaller()
+        signal(SIGINT, SIG_IGN)
+        let interrupt = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
+        interrupt.setEventHandler { installer.cancel() }
+        interrupt.resume()
+        defer { interrupt.cancel() }
+        try await installer.create(store: store, model: VMConfiguration(name: rest[0]), ipsw: rest[2]) { message in
+            FileHandle.standardError.write(Data((message + "\n").utf8))
+        }
         try printJSON(store.load(rest[0]))
     case "init":
         guard let name = rest.first else { throw UVError("Usage: uvm init NAME [--cpu N] [--memory N] [--disk N]") }
@@ -58,6 +71,8 @@ let help = """
 uVirtualization — Swift VM manager (foundation preview)
 
 Usage: uvm COMMAND
+  create NAME --from-ipsw PATH|latest
+                                 Install macOS from a restore image
   doctor                         Report host capabilities as JSON
   init NAME [--cpu N] [--memory MiB] [--disk GiB]
                                  Create a draft configuration (no guest installed)
@@ -70,8 +85,12 @@ Storage: UVM_HOME or ~/.uvm
 macOS installation, clone and run are planned; this preview cannot boot a VM.
 """
 
-do { try run() }
+Task { @MainActor in
+do { try await run(); exit(0) }
 catch {
     FileHandle.standardError.write(Data("uvm: \(error.localizedDescription)\n".utf8))
     exit(1)
 }
+
+}
+dispatchMain()

@@ -1,21 +1,24 @@
 import Foundation
 
 public struct UVError: LocalizedError {
-    public let message: String
+    public var message: String
     public init(_ message: String) { self.message = message }
     public var errorDescription: String? { message }
 }
 
 public struct VMConfiguration: Codable, Equatable {
-    public let schemaVersion: Int
-    public let name: String
-    public let guest: String
-    public let cpuCount: Int
-    public let memoryMiB: Int
-    public let diskGiB: Int
-    public let displayWidth: Int
-    public let displayHeight: Int
-    public let state: String
+    public var schemaVersion: Int
+    public var name: String
+    public var guest: String
+    public var cpuCount: Int
+    public var memoryMiB: Int
+    public var diskGiB: Int
+    public var displayWidth: Int
+    public var displayHeight: Int
+    public var state: String
+    public var macAddress: String?
+    public var minimumCPUCount: Int?
+    public var minimumMemoryMiB: Int?
 
     public init(name: String, cpuCount: Int = 4, memoryMiB: Int = 4096, diskGiB: Int = 64) throws {
         self.schemaVersion = 1
@@ -39,7 +42,7 @@ public struct VMConfiguration: Codable, Equatable {
     public func validate() throws {
         try Self.validateName(name)
         guard schemaVersion == 1 else { throw UVError("Unsupported configuration version \(schemaVersion).") }
-        guard guest == "macOS", state == "draft" else { throw UVError("Unsupported guest or configuration state.") }
+        guard ["macOS", "linux"].contains(guest), ["draft", "ready"].contains(state) else { throw UVError("Unsupported guest or configuration state.") }
         guard (1...1024).contains(cpuCount) else { throw UVError("CPU count must be between 1 and 1024.") }
         guard (4096...16_777_216).contains(memoryMiB) else { throw UVError("Memory must be between 4096 and 16777216 MiB.") }
         guard (20...1_048_576).contains(diskGiB) else { throw UVError("Disk must be between 20 and 1048576 GiB.") }
