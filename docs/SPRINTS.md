@@ -7,7 +7,7 @@ Work sequentially. Each sprint ends with build/test evidence and an honest statu
 | 01 | Swift package, shared models, local config store, CLI, diagnostics | Build and persistence/validation tests pass; CLI smoke test | Complete |
 | 02 | macOS IPSW installation | Signed installer creates boot artifacts; failures/cancellation recover safely | Implemented; guest acceptance pending |
 | 03 | Runtime and VM window | Boot, interact, graceful/force stop, ownership lock and status verified on hardware | Implemented; guest acceptance pending |
-| 04 | Local operations | Offline configure/clone/rename/delete, sparse disk growth, archive safety | Planned |
+| 04 | Local operations | Offline configure/clone/rename/delete, sparse disk growth, archive safety | Implemented; guest acceptance pending |
 | 05 | Network and devices | NAT/IP, directory sharing, display/audio, bridged capability checks | Planned |
 | 06 | OCI pull and compatibility | Verify digest, stream layers, clone and boot a pinned Tart image | Planned |
 | 07 | OCI publishing and cache | Keychain auth, push, retries, cancellation, prune under concurrent use | Planned |
@@ -41,3 +41,7 @@ Implemented local/latest IPSW installation, platform artifacts, sparse disks, st
 ## Sprint 03 implementation — 2026-09-16
 
 Added VZ runtime, native guest window, headless mode, lifecycle commands, session-scoped control requests and runtime ownership. Ten tests pass, including stale-status and stopped-guest control checks. Guest boot/input/shutdown acceptance is pending a restore image installation.
+
+## Sprint 04 implementation — 2026-09-16
+
+Added locked configure/clone/rename/delete, sparse disk expansion and streaming checksum-protected `.uvma` archives with a fixed artifact allowlist. Clone/import renew machine identity. Thirteen tests pass, including archive corruption/traversal and busy-VM rejection. Guest filesystem expansion remains a guest-side operation. Rename rolls back ordinary failures; power-loss recovery needs additional validation before release.

@@ -54,35 +54,45 @@ func run() async throws {
         guard rest.count == 1 || (command == "stop" && rest.count == 2 && rest[1] == "--force") else { throw UVError("Usage: uvm \(command) NAME" + (command == "stop" ? " [--force]" : "")) }
         try await RuntimeControl.send(store: store, name: rest[0], command: rest.contains("--force") ? "force-stop" : command)
         try printJSON(RuntimeControl.status(store: store, name: rest[0]))
+    case "set":
+        let args = try Arguments(rest, values: ["--cpu", "--memory", "--disk", "--width", "--height"])
+        try args.require(1)
+        try store.configure(args.positional[0], cpu: args.int("--cpu"), memory: args.int("--memory"), disk: args.int("--disk"), width: args.int("--width"), height: args.int("--height"))
+        try printJSON(store.load(args.positional[0]))
+    case "clone", "rename":
+        guard rest.count == 2 else { throw UVError("Usage: uvm \(command) SOURCE DESTINATION") }
+        if command == "clone" { try store.clone(rest[0], to: rest[1]) }
+        else { try store.rename(rest[0], to: rest[1]) }
+        try printJSON(store.load(rest[1]))
+    case "delete":
+        guard rest.count == 1 else { throw UVError("Usage: uvm delete NAME") }
+        try store.delete(rest[0])
+    case "export":
+        guard rest.count == 2 else { throw UVError("Usage: uvm export NAME FILE.uvma") }
+        try VMArchive.export(store: store, name: rest[0], to: URL(fileURLWithPath: rest[1]))
+    case "import":
+        guard rest.count == 2 else { throw UVError("Usage: uvm import FILE.uvma NAME") }
+        try VMArchive.importVM(store: store, from: URL(fileURLWithPath: rest[0]), name: rest[1])
+        try printJSON(store.load(rest[1]))
     case "create":
-        guard rest.count == 3, rest[1] == "--from-ipsw" else { throw UVError("Usage: uvm create NAME --from-ipsw PATH|latest") }
+        let args = try Arguments(rest, values: ["--from-ipsw", "--cpu", "--memory", "--disk"])
+        let model = try args.model()
+        guard let ipsw = args.value("--from-ipsw") else { throw UVError("Usage: uvm create NAME --from-ipsw PATH|latest") }
         let installer = MacInstaller()
         signal(SIGINT, SIG_IGN)
         let interrupt = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
         interrupt.setEventHandler { installer.cancel() }
         interrupt.resume()
         defer { interrupt.cancel() }
-        try await installer.create(store: store, model: VMConfiguration(name: rest[0]), ipsw: rest[2]) { message in
+        try await installer.create(store: store, model: model, ipsw: ipsw) { message in
             FileHandle.standardError.write(Data((message + "\n").utf8))
         }
-        try printJSON(store.load(rest[0]))
+        try printJSON(store.load(model.name))
     case "init":
-        guard let name = rest.first else { throw UVError("Usage: uvm init NAME [--cpu N] [--memory N] [--disk N]") }
-        var values: [String: Int] = [:]
-        var index = 1
-        while index < rest.count {
-            let key = rest[index]
-            guard ["--cpu", "--memory", "--disk"].contains(key), index + 1 < rest.count,
-                  let value = Int(rest[index + 1]), values[key] == nil else {
-                throw UVError("Invalid or repeated option '\(key)'. Use --cpu N, --memory MiB, --disk GiB.")
-            }
-            values[key] = value
-            index += 2
-        }
-        let configuration = try VMConfiguration(name: name, cpuCount: values["--cpu"] ?? 4,
-                                                memoryMiB: values["--memory"] ?? 4096, diskGiB: values["--disk"] ?? 64)
-        try store.create(configuration)
-        try printJSON(configuration)
+        let args = try Arguments(rest, values: ["--cpu", "--memory", "--disk"])
+        let model = try args.model()
+        try store.create(model)
+        try printJSON(model)
     default:
         throw UVError("Unknown command '\(command)'. Run uvm help for implemented commands.")
     }
@@ -92,6 +102,12 @@ let help = """
 uVirtualization — Swift VM manager (foundation preview)
 
 Usage: uvm COMMAND
+  set NAME [--cpu N] [--memory MiB] [--disk GiB] [--width N] [--height N]
+  clone SOURCE DESTINATION       Clone a stopped local VM
+  rename SOURCE DESTINATION      Rename a stopped VM
+  delete NAME                    Delete a stopped VM and its disks
+  export NAME FILE.uvma           Export a checked archive
+  import FILE.uvma NAME           Import with fresh identity
   run NAME [--headless]           Run an installed guest
   status NAME                    Report runtime state
   stop NAME [--force]             Request shutdown or force stop
