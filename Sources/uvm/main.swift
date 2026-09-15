@@ -61,6 +61,16 @@ func run() async throws {
         guard rest.count == 1 || (command == "stop" && rest.count == 2 && rest[1] == "--force") else { throw UVError("Usage: uvm \(command) NAME" + (command == "stop" ? " [--force]" : "")) }
         try await RuntimeControl.send(store: store, name: rest[0], command: rest.contains("--force") ? "force-stop" : command)
         try printJSON(RuntimeControl.status(store: store, name: rest[0]))
+    case "image-info":
+        guard rest.count == 1 else { throw UVError("Usage: uvm image-info REGISTRY/IMAGE:TAG") }
+        let client = RegistryClient(reference: try OCIReference(rest[0]))
+        let (manifest, digest) = try await client.manifest()
+        FileHandle.standardError.write(Data((digest + "\n").utf8))
+        try printJSON(manifest)
+    case "pull":
+        guard rest.count == 1 else { throw UVError("Usage: uvm pull REGISTRY/IMAGE:TAG") }
+        let image = try await RegistryImages.pull(OCIReference(rest[0]), store: store) { message in FileHandle.standardError.write(Data((message + "\n").utf8)) }
+        try printJSON(image)
     case "ip":
         let args = try Arguments(rest, values: ["--timeout"])
         try args.require(1)
@@ -72,7 +82,9 @@ func run() async throws {
         try printJSON(store.load(args.positional[0]))
     case "clone", "rename":
         guard rest.count == 2 else { throw UVError("Usage: uvm \(command) SOURCE DESTINATION") }
-        if command == "clone" { try store.clone(rest[0], to: rest[1]) }
+        if command == "clone", rest[0].contains("/") {
+            try await RegistryImages.clone(OCIReference(rest[0]), store: store, name: rest[1]) { message in FileHandle.standardError.write(Data((message + "\n").utf8)) }
+        } else if command == "clone" { try store.clone(rest[0], to: rest[1]) }
         else { try store.rename(rest[0], to: rest[1]) }
         try printJSON(store.load(rest[1]))
     case "delete":
@@ -114,6 +126,7 @@ uVirtualization — Swift VM manager (foundation preview)
 
 Usage: uvm COMMAND
   set NAME [--cpu N] [--memory MiB] [--disk GiB] [--width N] [--height N]
+  pull REGISTRY/IMAGE:TAG         Cache a verified VM image
   clone SOURCE DESTINATION       Clone a stopped local VM
   rename SOURCE DESTINATION      Rename a stopped VM
   delete NAME                    Delete a stopped VM and its disks

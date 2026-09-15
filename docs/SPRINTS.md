@@ -9,7 +9,7 @@ Work sequentially. Each sprint ends with build/test evidence and an honest statu
 | 03 | Runtime and VM window | Boot, interact, graceful/force stop, ownership lock and status verified on hardware | Implemented; guest acceptance pending |
 | 04 | Local operations | Offline configure/clone/rename/delete, sparse disk growth, archive safety | Implemented; guest acceptance pending |
 | 05 | Network and devices | NAT/IP, directory sharing, display/audio, bridged capability checks | Implemented; guest acceptance pending |
-| 06 | OCI pull and compatibility | Verify digest, stream layers, clone and boot a pinned Tart image | Planned |
+| 06 | OCI pull and compatibility | Verify digest, stream layers, clone and boot a pinned Tart image | Implemented; registry boot acceptance pending |
 | 07 | OCI publishing and cache | Keychain auth, push, retries, cancellation, prune under concurrent use | Planned |
 | 08 | ARM Linux | ISO install, EFI persistence, serial console, guest-specific devices | Planned |
 | 09 | Native app | Shared library, wizard, settings, VM windows, lifecycle errors | Planned |
@@ -49,3 +49,7 @@ Added locked configure/clone/rename/delete, sparse disk expansion and streaming 
 ## Sprint 05 implementation — 2026-09-16
 
 Added NAT lease discovery with timeout, read-only-by-default directory shares, optional audio output and clipboard, read-only extra disks and bridged interface checks. Fifteen tests pass. Bridging needs Apple-granted networking entitlements; development signing provides NAT only. Guest device acceptance remains pending installation.
+
+## Sprint 06 implementation — 2026-09-16
+
+Implemented OCI reference validation, anonymous bearer authentication, HTTPS redirects without cross-origin credentials, bounded manifests, disk-backed blob downloads, SHA-256 verification, reusable verified blob cache, Tart v1 config/raw LZ4 v2 disk adapter, native image import, remote clone and manifest inspection. Eighteen tests pass including decompression bounds. Retry resumes at verified blob boundaries; partial-blob byte resumption remains a release gap. Registry guest boot acceptance is pending.
