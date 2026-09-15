@@ -13,12 +13,12 @@ public final class VMRunner: NSObject, VZVirtualMachineDelegate, NSWindowDelegat
     private var failure: Error?
     private var controlTask: Task<Void, Never>?
 
-    public init(store: VMStore, name: String) throws {
+    public init(store: VMStore, name: String, options: RuntimeOptions = RuntimeOptions()) throws {
         self.name = name
         ownership = try store.lock(name)
         let model = try store.load(name)
         guard model.state == "ready" else { throw UVError("VM is a draft; install a guest first.") }
-        machine = VZVirtualMachine(configuration: try VirtualMachineFactory.configuration(model, directory: store.directory(name)))
+        machine = VZVirtualMachine(configuration: try VirtualMachineFactory.configuration(model, directory: store.directory(name), options: options))
         controlDirectory = try RuntimeControl.directory(store: store, name: name)
         super.init()
         machine.delegate = self

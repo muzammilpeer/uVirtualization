@@ -3,7 +3,7 @@ import Virtualization
 
 @MainActor
 public enum VirtualMachineFactory {
-    public static func configuration(_ model: VMConfiguration, directory: URL) throws -> VZVirtualMachineConfiguration {
+    public static func configuration(_ model: VMConfiguration, directory: URL, options: RuntimeOptions = RuntimeOptions()) throws -> VZVirtualMachineConfiguration {
         try model.validate()
         guard VZVirtualMachine.isSupported else { throw UVError("Virtualization is unavailable. Run the signed binary on an Apple silicon host.") }
         let config = VZVirtualMachineConfiguration()
@@ -43,6 +43,7 @@ public enum VirtualMachineFactory {
         config.keyboards = [VZUSBKeyboardConfiguration()]
         config.pointingDevices = [VZUSBScreenCoordinatePointingDeviceConfiguration()]
         config.entropyDevices = [VZVirtioEntropyDeviceConfiguration()]
+        try apply(options, to: config)
         try config.validate()
         return config
     }

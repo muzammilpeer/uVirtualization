@@ -8,7 +8,7 @@ Work sequentially. Each sprint ends with build/test evidence and an honest statu
 | 02 | macOS IPSW installation | Signed installer creates boot artifacts; failures/cancellation recover safely | Implemented; guest acceptance pending |
 | 03 | Runtime and VM window | Boot, interact, graceful/force stop, ownership lock and status verified on hardware | Implemented; guest acceptance pending |
 | 04 | Local operations | Offline configure/clone/rename/delete, sparse disk growth, archive safety | Implemented; guest acceptance pending |
-| 05 | Network and devices | NAT/IP, directory sharing, display/audio, bridged capability checks | Planned |
+| 05 | Network and devices | NAT/IP, directory sharing, display/audio, bridged capability checks | Implemented; guest acceptance pending |
 | 06 | OCI pull and compatibility | Verify digest, stream layers, clone and boot a pinned Tart image | Planned |
 | 07 | OCI publishing and cache | Keychain auth, push, retries, cancellation, prune under concurrent use | Planned |
 | 08 | ARM Linux | ISO install, EFI persistence, serial console, guest-specific devices | Planned |
@@ -45,3 +45,7 @@ Added VZ runtime, native guest window, headless mode, lifecycle commands, sessio
 ## Sprint 04 implementation — 2026-09-16
 
 Added locked configure/clone/rename/delete, sparse disk expansion and streaming checksum-protected `.uvma` archives with a fixed artifact allowlist. Clone/import renew machine identity. Thirteen tests pass, including archive corruption/traversal and busy-VM rejection. Guest filesystem expansion remains a guest-side operation. Rename rolls back ordinary failures; power-loss recovery needs additional validation before release.
+
+## Sprint 05 implementation — 2026-09-16
+
+Added NAT lease discovery with timeout, read-only-by-default directory shares, optional audio output and clipboard, read-only extra disks and bridged interface checks. Fifteen tests pass. Bridging needs Apple-granted networking entitlements; development signing provides NAT only. Guest device acceptance remains pending installation.

@@ -35,8 +35,15 @@ func run() async throws {
         guard rest.count == 1 else { throw UVError("Usage: uvm inspect NAME") }
         try printJSON(store.load(rest[0]))
     case "run":
-        guard rest.count >= 1, rest.count <= 2, rest.count == 1 || rest[1] == "--headless" else { throw UVError("Usage: uvm run NAME [--headless]") }
-        let runner = try VMRunner(store: store, name: rest[0])
+        let args = try Arguments(rest, values: ["--dir", "--bridge", "--disk"], flags: ["--headless", "--audio", "--clipboard"], repeated: ["--dir", "--disk"])
+        try args.require(1)
+        var options = RuntimeOptions()
+        options.directories = try (args.options["--dir"] ?? []).map { try DirectoryMount($0) }
+        options.bridge = args.value("--bridge")
+        options.audio = args.value("--audio") != nil
+        options.clipboard = args.value("--clipboard") != nil
+        options.additionalDisks = (args.options["--disk"] ?? []).map { URL(fileURLWithPath: $0) }
+        let runner = try VMRunner(store: store, name: args.positional[0], options: options)
         signal(SIGINT, SIG_IGN)
         signal(SIGTERM, SIG_IGN)
         let signals = [SIGINT, SIGTERM].map { signalNumber -> DispatchSourceSignal in
@@ -54,6 +61,10 @@ func run() async throws {
         guard rest.count == 1 || (command == "stop" && rest.count == 2 && rest[1] == "--force") else { throw UVError("Usage: uvm \(command) NAME" + (command == "stop" ? " [--force]" : "")) }
         try await RuntimeControl.send(store: store, name: rest[0], command: rest.contains("--force") ? "force-stop" : command)
         try printJSON(RuntimeControl.status(store: store, name: rest[0]))
+    case "ip":
+        let args = try Arguments(rest, values: ["--timeout"])
+        try args.require(1)
+        print(try await IPDiscovery.wait(store: store, name: args.positional[0], timeout: Double(try args.int("--timeout") ?? 30)))
     case "set":
         let args = try Arguments(rest, values: ["--cpu", "--memory", "--disk", "--width", "--height"])
         try args.require(1)
@@ -108,7 +119,9 @@ Usage: uvm COMMAND
   delete NAME                    Delete a stopped VM and its disks
   export NAME FILE.uvma           Export a checked archive
   import FILE.uvma NAME           Import with fresh identity
-  run NAME [--headless]           Run an installed guest
+  ip NAME [--timeout SECONDS]     Discover NAT guest address
+  run NAME [--headless] [--dir NAME=PATH:ro|:rw] [--bridge IFACE]
+           [--audio] [--clipboard] [--disk READ_ONLY_IMAGE]
   status NAME                    Report runtime state
   stop NAME [--force]             Request shutdown or force stop
   pause NAME / resume NAME        Control execution
