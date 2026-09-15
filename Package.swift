@@ -4,7 +4,8 @@ import PackageDescription
 let package = Package(
     name: "uVirtualization",
     platforms: [.macOS(.v13)],
-    products: [.library(name: "UVCore", targets: ["UVCore"]), .executable(name: "uvm", targets: ["uvm"])],
+    products: [.library(name: "UVCore", targets: ["UVCore"]), .executable(name: "uvm", targets: ["uvm"]), .executable(name: "uVirtualization", targets: ["UVApp"])],
     targets: [.target(name: "UVCore"), .executableTarget(name: "uvm", dependencies: ["UVCore"]),
+              .executableTarget(name: "UVApp", dependencies: ["UVCore"]),
               .testTarget(name: "UVCoreTests", dependencies: ["UVCore"])]
 )

@@ -5,14 +5,14 @@ Work sequentially. Each sprint ends with build/test evidence and an honest statu
 | Sprint | Deliverable | Exit criteria | Status |
 |---|---|---|---|
 | 01 | Swift package, shared models, local config store, CLI, diagnostics | Build and persistence/validation tests pass; CLI smoke test | Complete |
-| 02 | macOS IPSW installation | Signed installer creates boot artifacts; failures/cancellation recover safely | Implemented; guest acceptance pending |
+| 02 | macOS IPSW installation | Signed installer creates boot artifacts; failures/cancellation recover safely | Installation verified; failure/cancel acceptance pending |
 | 03 | Runtime and VM window | Boot, interact, graceful/force stop, ownership lock and status verified on hardware | Implemented; guest acceptance pending |
 | 04 | Local operations | Offline configure/clone/rename/delete, sparse disk growth, archive safety | Implemented; guest acceptance pending |
 | 05 | Network and devices | NAT/IP, directory sharing, display/audio, bridged capability checks | Implemented; guest acceptance pending |
 | 06 | OCI pull and compatibility | Verify digest, stream layers, clone and boot a pinned Tart image | Implemented; registry boot acceptance pending |
 | 07 | OCI publishing and cache | Keychain auth, push, retries, cancellation, prune under concurrent use | Implemented; private registry acceptance pending |
 | 08 | ARM Linux | ISO install, EFI persistence, serial console, guest-specific devices | Implemented; distribution install acceptance pending |
-| 09 | Native app | Shared library, wizard, settings, VM windows, lifecycle errors | Planned |
+| 09 | Native app | Shared library, wizard, settings, VM windows, lifecycle errors | Implemented; UI acceptance partially verified |
 | 10 | Automation and parity audit | Version-pinned Tart command matrix, JSON/completions, CI examples; close gaps | Planned |
 | 11 | Release engineering | M1 hardware suite, signed/notarized artifacts, Homebrew recipe and upgrade tests | Planned |
 | 12+ | Extensions | Remote control, pools and multi-host orchestration separately specified | Backlog |
@@ -61,3 +61,7 @@ Added Keychain login/logout and host-scoped environment credentials, native comp
 ## Sprint 08 implementation — 2026-09-16
 
 Added Linux EFI machine creation, virtio graphics/balloon, ISO attachment, serial I/O and optional Rosetta directory sharing with explicit installation command. Nineteen tests pass. Signed hardware smoke test on this arm64 host successfully created a blank EFI VM, started it, paused/resumed it, forced stop and verified stopped status. This verifies runtime control, not a Linux distribution installation.
+
+## Sprint 09 implementation — 2026-09-16
+
+Added native SwiftUI library, creation/import forms, resource editor, clone/delete actions, runtime controls, guest-access options and quit protection. Nineteen tests pass; the development-signed app bundle verifies. Launched the app and visually inspected the library and creation form. macOS latest restore installation completed successfully on this host with a 32 GiB sparse disk in `.build/acceptance-vms/acceptance-macos`; remaining guest checks follow.
