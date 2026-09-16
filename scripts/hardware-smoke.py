@@ -14,6 +14,7 @@ def invoke(*args):
     return p.stdout
 name = 'acceptance-macos' if args.macos else 'efi-smoke'
 if not (pathlib.Path(env['UVM_HOME']) / name).exists():
+    if args.macos: raise RuntimeError('Install acceptance-macos in .build/acceptance-vms first')
     invoke('create', name, '--linux', '--disk', '20')
 with open(root / '.build/hardware-runtime.log', 'w') as log:
     process = subprocess.Popen([binary, 'run', name, '--headless'], env=env, stdout=log, stderr=log)
@@ -42,6 +43,8 @@ with open(root / '.build/hardware-runtime.log', 'w') as log:
         print(('macOS installed guest' if args.macos else 'Blank EFI guest') + ': start, status, pause, resume, stop: PASS')
     finally:
         if process.poll() is None:
-            process.terminate()
-            try: process.wait(timeout=5)
-            except subprocess.TimeoutExpired: process.kill(); process.wait()
+            try:
+                invoke('stop', name, '--force')
+                process.wait(timeout=30)
+            except Exception:
+                process.kill(); process.wait()

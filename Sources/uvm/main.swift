@@ -35,6 +35,13 @@ func run() async throws {
     case "inspect", "get":
         guard rest.count == 1 else { throw UVError("Usage: uvm inspect NAME") }
         try printJSON(store.load(rest[0]))
+    case "serve":
+        let args = try Arguments(rest, values: ["--port", "--token-file"])
+        try args.require(0)
+        guard let token = args.value("--token-file"), let port = UInt16(exactly: try args.int("--port") ?? 9022) else { throw UVError("Usage: uvm serve --token-file PATH [--port 9022]") }
+        let server = try ControlAPIServer(store: store, port: port, tokenFile: URL(fileURLWithPath: token))
+        FileHandle.standardError.write(Data("Control API bound to loopback port \(port).\n".utf8))
+        try await server.run()
     case "fqn":
         guard rest.count == 1 else { throw UVError("Usage: uvm fqn REGISTRY/IMAGE:TAG") }
         let reference = try OCIReference(rest[0])
@@ -208,6 +215,8 @@ Usage: uvm COMMAND
                                  Create a draft configuration (no guest installed)
   list                           List local VMs as JSON
   inspect NAME                   Print a configuration as JSON
+  serve --token-file PATH [--port 9022]
+                                 Start token-protected loopback control API
   fqn REGISTRY/IMAGE:TAG          Resolve an immutable image reference
   exec NAME --user USER -- COMMAND [ARG...]
                                  Execute over SSH using existing host trust

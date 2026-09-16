@@ -15,7 +15,8 @@ Work sequentially. Each sprint ends with build/test evidence and an honest statu
 | 09 | Native app | Shared library, wizard, settings, VM windows, lifecycle errors | Implemented; UI acceptance partially verified |
 | 10 | Automation and parity audit | Version-pinned Tart command matrix, JSON/completions, CI examples; close gaps | Automation implemented; parity gaps documented |
 | 11 | Release engineering | M1 hardware suite, signed/notarized artifacts, Homebrew recipe and upgrade tests | Development packaging complete; release gates deferred/open |
-| 12+ | Extensions | Remote control, pools and multi-host orchestration separately specified | Backlog |
+| 12 | Extension foundation | Token-protected local control API and future orchestration specification | Implemented; local API smoke passed |
+| Future | Multi-host orchestration | Enrollment, scheduling, pools, isolation and recovery | Separate product backlog |
 
 ## Sprint 01 scope
 
@@ -73,3 +74,7 @@ Added SSH exec with argument quoting/host verification, get/fqn, completions, JS
 ## Sprint 11 development delivery — 2026-09-16
 
 Produced an optimized development-signed application ZIP, SHA-256 checksum and generated Homebrew formula. Signature verification and formula syntax pass; 21 unit tests and 26 CLI scenarios pass. Added release/notarization tooling, acceptance matrix and current usage documentation. Final Developer ID/notarization/publication are deferred by explicit user direction. M1/newer-host matrix and remaining guest acceptance remain release gates.
+
+## Sprint 12 extension foundation — 2026-09-16
+
+Implemented a token-protected loopback HTTP API for inventory, host diagnostics and lifecycle control. Token permissions, authentication, request framing, connection bounds and shutdown behavior are documented. Twenty-four unit tests pass. Live loopback smoke verifies authenticated inventory and rejection of invalid tokens. The original open-ended 12+ backlog is now separated into this deliverable and a future multi-host product specification; orchestration/pools are not claimed complete.

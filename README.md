@@ -87,6 +87,7 @@ Data lives in `~/.uvm`; `UVM_HOME` selects a different inventory. The app also o
 - [Compatibility audit](docs/PARITY.md)
 - [Hardware acceptance](docs/ACCEPTANCE.md)
 - [Automation contract](docs/AUTOMATION.md)
+- [Control API and future extensions](docs/CONTROL_API.md)
 - [Development packaging and final release](docs/RELEASE.md)
 
 `UVCore` owns storage, installation, runtime and registry services. `uvm` and `UVApp` share that implementation. No Tart source code is included. Release signing, notarization and publication are deferred until final release details are supplied.
