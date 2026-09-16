@@ -11,7 +11,7 @@ public struct PulledImage: Codable {
 
 public enum RegistryImages {
     public static func cacheStore(_ store: VMStore) -> VMStore { VMStore(root: store.root.appendingPathComponent(".cache/images")) }
-    public static func pull(_ reference: OCIReference, store: VMStore, progress: @escaping (String) -> Void = { _ in }) async throws -> PulledImage {
+    public static func pull(_ reference: OCIReference, store: VMStore, keepBlobs: Bool = true, progress: @escaping (String) -> Void = { _ in }) async throws -> PulledImage {
         let lock = try FileLock(url: store.root.appendingPathComponent(".cache/ownership.lock"))
         defer { lock.unlock() }
         let registry = RegistryClient(reference: reference)
@@ -23,6 +23,7 @@ public enum RegistryImages {
         let stage = try cache.stage(name)
         defer { try? FileManager.default.removeItem(at: stage) }
         let blobs = store.root.appendingPathComponent(".cache/blobs")
+        guard manifest.config.size <= 16_777_216 else { throw UVError("OCI platform config exceeds size limit.") }
         let configBlob = try await registry.blob(manifest.config, cache: blobs)
         guard let platform = try JSONSerialization.jsonObject(with: Data(contentsOf: configBlob)) as? [String: Any],
               platform["architecture"] as? String == "arm64", ["darwin", "linux"].contains(platform["os"] as? String ?? "") else { throw UVError("Only ARM64 macOS/Linux VM images are supported.") }
@@ -33,6 +34,7 @@ public enum RegistryImages {
             try Task.checkCancellation()
             progress("Fetching layer \(index + 1)/\(manifest.layers.count)")
             let blob = try await registry.blob(layer, cache: blobs)
+            defer { if !keepBlobs { try? FileManager.default.removeItem(at: blob) } }
             switch layer.mediaType {
             case "application/vnd.cirruslabs.tart.disk.v2":
                 guard isTart, let text = layer.annotations?["org.cirruslabs.tart.uncompressed-size"], let size = UInt64(text), size > 0, size <= 1_073_741_824 else { throw UVError("Missing or invalid Tart layer size.") }
@@ -85,13 +87,13 @@ public enum RegistryImages {
         return result
     }
 
-    public static func clone(_ reference: OCIReference, store: VMStore, name: String, progress: @escaping (String) -> Void = { _ in }) async throws {
+    public static func clone(_ reference: OCIReference, store: VMStore, name: String, keepBlobs: Bool = true, progress: @escaping (String) -> Void = { _ in }) async throws {
         try VMConfiguration.validateName(name)
         let destinationLock = try store.lock(name)
         defer { destinationLock.unlock() }
         let destination = try store.directory(name)
         guard !FileManager.default.fileExists(atPath: destination.path) else { throw UVError("Destination already exists.") }
-        let image = try await pull(reference, store: store, progress: progress)
+        let image = try await pull(reference, store: store, keepBlobs: keepBlobs, progress: progress)
         let cacheLock = try FileLock(url: store.root.appendingPathComponent(".cache/ownership.lock"))
         defer { cacheLock.unlock() }
         let cache = cacheStore(store)

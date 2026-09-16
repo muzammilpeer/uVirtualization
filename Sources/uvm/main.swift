@@ -32,9 +32,30 @@ func run() async throws {
     case "list":
         guard rest.isEmpty else { throw UVError("list takes no arguments.") }
         try printJSON(store.list())
-    case "inspect":
+    case "inspect", "get":
         guard rest.count == 1 else { throw UVError("Usage: uvm inspect NAME") }
         try printJSON(store.load(rest[0]))
+    case "fqn":
+        guard rest.count == 1 else { throw UVError("Usage: uvm fqn REGISTRY/IMAGE:TAG") }
+        let reference = try OCIReference(rest[0])
+        let (_, digest) = try await RegistryClient(reference: reference).manifest()
+        print(reference.host + "/" + reference.repository + "@" + digest)
+    case "exec":
+        guard let separator = rest.firstIndex(of: "--") else { throw UVError("Usage: uvm exec NAME --user USER -- COMMAND [ARG...]") }
+        let args = try Arguments(Array(rest[..<separator]), values: ["--user", "--timeout"])
+        try args.require(1)
+        guard let user = args.value("--user") else { throw UVError("Specify --user for SSH execution.") }
+        let ip = try await IPDiscovery.wait(store: store, name: args.positional[0], timeout: Double(try args.int("--timeout") ?? 30))
+        try await GuestCommand.execute(address: ip, user: user, arguments: Array(rest.dropFirst(separator + 1)))
+    case "completions":
+        guard rest.count == 1 else { throw UVError("Usage: uvm completions bash|zsh|fish") }
+        let commands = "create init clone run set get inspect list status login logout ip exec pull push import export prune rename stop pause resume delete fqn doctor version help serve"
+        switch rest[0] {
+        case "bash": print("complete -W '\(commands)' uvm")
+        case "zsh": print("#compdef uvm\n_arguments '1:command:(\(commands))' '*:file:_files'")
+        case "fish": print("complete -c uvm -f -a '\(commands)'")
+        default: throw UVError("Supported shells: bash, zsh, fish.")
+        }
     case "run":
         let args = try Arguments(rest, values: ["--dir", "--bridge", "--disk"], flags: ["--headless", "--audio", "--clipboard", "--serial", "--rosetta"], repeated: ["--dir", "--disk"])
         try args.require(1)
@@ -99,9 +120,11 @@ func run() async throws {
         try store.configure(args.positional[0], cpu: args.int("--cpu"), memory: args.int("--memory"), disk: args.int("--disk"), width: args.int("--width"), height: args.int("--height"))
         try printJSON(store.load(args.positional[0]))
     case "clone", "rename":
+        let args = try Arguments(rest, flags: command == "clone" ? ["--discard-blobs"] : [])
+        let rest = args.positional
         guard rest.count == 2 else { throw UVError("Usage: uvm \(command) SOURCE DESTINATION") }
         if command == "clone", rest[0].contains("/") {
-            try await RegistryImages.clone(OCIReference(rest[0]), store: store, name: rest[1]) { message in FileHandle.standardError.write(Data((message + "\n").utf8)) }
+            try await RegistryImages.clone(OCIReference(rest[0]), store: store, name: rest[1], keepBlobs: args.value("--discard-blobs") == nil) { message in FileHandle.standardError.write(Data((message + "\n").utf8)) }
         } else if command == "clone" { try store.clone(rest[0], to: rest[1]) }
         else { try store.rename(rest[0], to: rest[1]) }
         try printJSON(store.load(rest[1]))
@@ -153,7 +176,7 @@ func run() async throws {
 }
 
 let help = """
-uVirtualization — Swift VM manager (foundation preview)
+uVirtualization — Swift VM manager (development build)
 
 Usage: uvm COMMAND
   set NAME [--cpu N] [--memory MiB] [--disk GiB] [--width N] [--height N]
@@ -182,8 +205,12 @@ Usage: uvm COMMAND
   doctor                         Report host capabilities as JSON
   init NAME [--cpu N] [--memory MiB] [--disk GiB]
                                  Create a draft configuration (no guest installed)
-  list                           List draft configurations as JSON
+  list                           List local VMs as JSON
   inspect NAME                   Print a configuration as JSON
+  fqn REGISTRY/IMAGE:TAG          Resolve an immutable image reference
+  exec NAME --user USER -- COMMAND [ARG...]
+                                 Execute over SSH using existing host trust
+  completions bash|zsh|fish       Print shell completion script
   version                        Print version
   help                           Show help
 
@@ -191,13 +218,29 @@ Storage: UVM_HOME or ~/.uvm
 Use scripts/sign.sh before guest installation or execution.
 """
 
-Task { @MainActor in
+let commandTask = Task { @MainActor in
 do { try await run(); exit(0) }
+catch let error as GuestExit { exit(error.status) }
 catch {
+    if ProcessInfo.processInfo.environment["UVM_JSON_ERRORS"] == "1" {
+        let data = (try? JSONSerialization.data(withJSONObject: ["error": error.localizedDescription])) ?? Data()
+        FileHandle.standardError.write(data + Data([10]))
+    } else {
     FileHandle.standardError.write(Data("uvm: \(error.localizedDescription)\n".utf8))
-    exit(1)
+    }
+    exit(error is CancellationError ? 130 : 1)
 }
 
+}
+var cancellationSignals: [DispatchSourceSignal] = []
+if !["run", "create"].contains(CommandLine.arguments.dropFirst().first ?? "") {
+    for number in [SIGINT, SIGTERM] {
+        signal(number, SIG_IGN)
+        let source = DispatchSource.makeSignalSource(signal: number, queue: .main)
+        source.setEventHandler { commandTask.cancel() }
+        source.resume()
+        cancellationSignals.append(source)
+    }
 }
 if CommandLine.arguments.dropFirst().first == "run", !CommandLine.arguments.contains("--headless") {
     NSApplication.shared.run()
