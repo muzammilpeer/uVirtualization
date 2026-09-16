@@ -5,17 +5,24 @@ import AppKit
 @MainActor
 final class LibraryModel: ObservableObject {
     static let shared = LibraryModel()
-    let store = VMStore(root: VMStore.defaultRoot)
+    var store = VMStore(root: VMStore.defaultRoot)
     @Published var machines: [VMConfiguration] = []
     @Published var selection: String?
     @Published var statuses: [String: String] = [:]
     @Published var progress = ""
     @Published var busy = false
+    @Published var canCancelInstallation = false
     @Published var error: String?
     private var runners: [String: VMRunner] = [:]
     private var installer: MacInstaller?
     var hasActiveWork: Bool { busy || !runners.isEmpty }
 
+    func chooseStorage(_ url: URL) {
+        guard !hasActiveWork else { error = "Stop active VMs and finish installation before changing storage."; return }
+        store = VMStore(root: url)
+        selection = nil
+        refresh()
+    }
     func refresh() {
         do {
             machines = try store.list()
@@ -28,15 +35,16 @@ final class LibraryModel: ObservableObject {
         busy = true
         progress = "Preparing virtual machine…"
         Task {
-            defer { busy = false; installer = nil; refresh() }
+            defer { busy = false; installer = nil; canCancelInstallation = false; refresh() }
             do {
                 let model = try VMConfiguration(name: name, cpuCount: cpu, memoryMiB: memory, diskGiB: disk)
                 if linux { try LinuxInstaller.create(store: store, model: model) }
                 else {
                     let installer = MacInstaller()
                     self.installer = installer
-                    try await installer.create(store: store, model: model, ipsw: ipsw) { [weak self] message in
-                        Task { @MainActor in self?.report(message) }
+                    canCancelInstallation = true
+                    try await installer.create(store: store, model: model, ipsw: ipsw) { message in
+                        Task { @MainActor in self.report(message) }
                     }
                 }
                 selection = name

@@ -1,40 +1,92 @@
 # uVirtualization
 
-A Swift-based VM manager for Apple silicon Macs, starting with M1. The planned CLI and native app share Apple's Virtualization framework through `UVCore`.
+A native Swift VM manager for Apple silicon Macs, with a command-line tool (`uvm`) and a SwiftUI application. Uses Apple's Virtualization framework directly.
 
-**Current milestone: Sprint 01 foundation.** You can inspect host capabilities and manage persistent configuration drafts. macOS installation, guest execution, Tart registry compatibility and the native app are planned, not implemented yet.
+**Development build.** macOS installation and EFI runtime controls have passed hardware checks on the development host. Full Tart parity and the remaining guest acceptance tests are still open; see [acceptance](docs/ACCEPTANCE.md) and [compatibility audit](docs/PARITY.md).
 
-## Build and try
+## Build
 
-Requires an Apple silicon Mac, macOS 13 or newer, and Xcode/Swift 5.9 or newer.
-
-```sh
-swift build
-swift test
-swift run uvm doctor
-swift run uvm init tahoe-base --cpu 4 --memory 4096 --disk 64
-swift run uvm list
-swift run uvm inspect tahoe-base
-```
-
-`init` writes a draft only; it does not allocate a disk or install macOS. Memory is in MiB; disk capacity is in GiB. Defaults are 4 CPUs, 4096 MiB RAM and 64 GiB disk. Hardware-specific resource limits will also be checked when installation/runtime is implemented.
-
-Data lives in `~/.uvm`. Set `UVM_HOME` to use a different directory. Inventory and configuration output is JSON. Errors go to stderr with exit code 1; success uses 0. An existing name is never overwritten. Do not manually edit storage while a command is running.
-
-For environments that restrict user cache access:
+Requires an Apple silicon Mac, macOS 13+, Xcode and Swift 5.9+.
 
 ```sh
-CLANG_MODULE_CACHE_PATH="$PWD/.build/clang-cache" \
-SWIFTPM_MODULECACHE_OVERRIDE="$PWD/.build/module-cache" \
-swift test --disable-sandbox --cache-path .build/cache
+./scripts/check.sh
+python3 scripts/cli-smoke.py
+./scripts/sign.sh
+.build/debug/uvm doctor
+./scripts/package-dev.sh
+open .build/uVirtualization.app
 ```
 
-## Design and work plan
+The CLI must be signed with the virtualization entitlement. `swift run` can rebuild it without that entitlement; use the signed executable for guest operations. Build scripts place compiler caches inside the workspace.
 
-- [Requirements](docs/REQUIREMENTS.md): product scope, acceptance criteria and references.
-- [Sprint roadmap](docs/SPRINTS.md): ordered implementation and delivery status.
-- `Sources/UVCore`: versioned configuration, store and host capability checks.
-- `Sources/uvm`: command-line interface.
-- `Resources/uvm.entitlements`: virtualization entitlement for the future signed runtime. The current build does not perform runtime signing.
+## Install and run macOS
 
-The app will use SwiftUI/AppKit and `VZVirtualMachineView`. OCI images will require an explicit Tart image-format adapter; ordinary container images cannot be booted as VMs. No Tart source code is included.
+```sh
+.build/debug/uvm create my-mac --from-ipsw latest --disk 64
+.build/debug/uvm run my-mac
+```
+
+Or supply a local `.ipsw` file. `latest` downloads Apple's compatible restore image. The guest opens Setup Assistant after installation; uvm does not create a guest user or enable SSH.
+
+## Clone a registry VM
+
+```sh
+.build/debug/uvm clone ghcr.io/cirruslabs/macos-tahoe-base:latest tahoe-base
+.build/debug/uvm run tahoe-base
+```
+
+The adapter supports ARM64 Tart v1 configurations with raw disks in v2 LZ4 layers, and native uvm image layers. Compatibility testing of the pinned Tahoe image is tracked in the acceptance record. Ordinary container images are rejected. Use `--discard-blobs` on remote clone to reduce cache space.
+
+## Linux
+
+```sh
+.build/debug/uvm create linux-dev --linux --disk 40
+.build/debug/uvm run linux-dev --disk /absolute/path/to/arm64-installer.iso
+# After installing and shutting down, omit the ISO:
+.build/debug/uvm run linux-dev
+```
+
+Optional Linux flags: `--serial`, `--rosetta`. Rosetta must first be installed with `uvm install-rosetta` and configured inside the guest.
+
+## Manage VMs
+
+```sh
+uvm list
+uvm inspect my-mac
+uvm set my-mac --cpu 4 --memory 8192 --disk 80
+uvm clone my-mac my-mac-copy
+uvm run my-mac --headless --dir source=/absolute/path:ro
+uvm status my-mac
+uvm pause my-mac
+uvm resume my-mac
+uvm stop my-mac
+```
+
+These examples assume the signed CLI is on your PATH. `stop` requests guest shutdown; `stop NAME --force` immediately stops it. Wait for `status` to report stopped before changing resources. `suspend` uses Apple's saved-state support on compatible macOS 14+ configurations; `run` restores the saved state. Cloning/configuring/deleting a suspended guest is refused.
+
+Memory uses MiB; disk capacity uses GiB. Growing the virtual disk does not automatically expand the guest filesystem. Extra `run --disk` attachments are read-only. Audio, clipboard and writable shared folders are opt-in. Clipboard requires guest agent support. Bridging requires an additional Apple entitlement.
+
+## Registry and archives
+
+```sh
+printf '%s' "$REGISTRY_TOKEN" | uvm login ghcr.io --username USER --password-stdin
+uvm push my-mac ghcr.io/OWNER/IMAGE:TAG
+uvm export my-mac backup.uvma
+uvm import backup.uvma restored-mac
+uvm prune --all
+```
+
+Push writes uvm's native OCI format. `.uvma` is a checksum-protected uvm archive, not Tart's export format. Exports stream disk contents and may require space equal to the disk's logical size. Registry credentials are stored in Keychain. Never log tokens.
+
+Data lives in `~/.uvm`; `UVM_HOME` selects a different inventory. The app also offers **File → Choose VM Storage**. Failed macOS installations retain their files under `.staging` with `failure.txt`. `init NAME` creates only a configuration draft, not a bootable VM.
+
+## Plan and validation
+
+- [Requirements](docs/REQUIREMENTS.md)
+- [Sprint progress and commits](docs/SPRINTS.md)
+- [Compatibility audit](docs/PARITY.md)
+- [Hardware acceptance](docs/ACCEPTANCE.md)
+- [Automation contract](docs/AUTOMATION.md)
+- [Development packaging and final release](docs/RELEASE.md)
+
+`UVCore` owns storage, installation, runtime and registry services. `uvm` and `UVApp` share that implementation. No Tart source code is included. Release signing, notarization and publication are deferred until final release details are supplied.

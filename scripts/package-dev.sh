@@ -1,11 +1,13 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
-./scripts/build.sh
+configuration="${BUILD_CONFIGURATION:-debug}"
+case "$configuration" in debug|release) ;; *) printf 'Invalid build configuration\n' >&2; exit 1;; esac
+./scripts/build.sh -c "$configuration"
 app="$PWD/.build/uVirtualization.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-cp .build/debug/uVirtualization "$app/Contents/MacOS/uVirtualization"
-cp .build/debug/uvm "$app/Contents/MacOS/uvm"
+cp ".build/$configuration/uVirtualization" "$app/Contents/MacOS/uVirtualization"
+cp ".build/$configuration/uvm" "$app/Contents/MacOS/uvm"
 cat > "$app/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

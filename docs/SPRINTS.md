@@ -14,7 +14,7 @@ Work sequentially. Each sprint ends with build/test evidence and an honest statu
 | 08 | ARM Linux | ISO install, EFI persistence, serial console, guest-specific devices | Implemented; distribution install acceptance pending |
 | 09 | Native app | Shared library, wizard, settings, VM windows, lifecycle errors | Implemented; UI acceptance partially verified |
 | 10 | Automation and parity audit | Version-pinned Tart command matrix, JSON/completions, CI examples; close gaps | Automation implemented; parity gaps documented |
-| 11 | Release engineering | M1 hardware suite, signed/notarized artifacts, Homebrew recipe and upgrade tests | Planned |
+| 11 | Release engineering | M1 hardware suite, signed/notarized artifacts, Homebrew recipe and upgrade tests | Development packaging complete; release gates deferred/open |
 | 12+ | Extensions | Remote control, pools and multi-host orchestration separately specified | Backlog |
 
 ## Sprint 01 scope
@@ -69,3 +69,7 @@ Added native SwiftUI library, creation/import forms, resource editor, clone/dele
 ## Sprint 10 implementation — 2026-09-16
 
 Added SSH exec with argument quoting/host verification, get/fqn, completions, JSON error mode, cancellation, saved-state suspend/restore with offline mutation protection, CI/manual smoke scripts and pinned parity audit. Twenty-one unit tests and 26 CLI scenarios pass. Real image testing found a 32 MiB firmware artifact; the adapter limit was corrected and metadata checks moved before disk transfers. See PARITY.md for unresolved compatibility requirements. An existing user-side Sprint 10 commit was preserved; this commit records the additional automation and audit work.
+
+## Sprint 11 development delivery — 2026-09-16
+
+Produced an optimized development-signed application ZIP, SHA-256 checksum and generated Homebrew formula. Signature verification and formula syntax pass; 21 unit tests and 26 CLI scenarios pass. Added release/notarization tooling, acceptance matrix and current usage documentation. Final Developer ID/notarization/publication are deferred by explicit user direction. M1/newer-host matrix and remaining guest acceptance remain release gates.

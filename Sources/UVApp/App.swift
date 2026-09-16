@@ -22,7 +22,13 @@ struct UVApplication: App {
             LibraryView().environmentObject(library).frame(minWidth: 880, minHeight: 600)
         }
         .commands {
-            CommandGroup(replacing: .newItem) {}
+            CommandGroup(replacing: .newItem) {
+                Button("Choose VM Storage…") {
+                    let panel = NSOpenPanel()
+                    panel.canChooseDirectories = true; panel.canChooseFiles = false
+                    if panel.runModal() == .OK, let url = panel.url { library.chooseStorage(url) }
+                }
+            }
             CommandGroup(after: .help) {
                 Button("Reveal VM Storage") {
                     NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: library.store.root.path)
@@ -88,7 +94,7 @@ struct LibraryView: View {
                     if library.busy { ProgressView().controlSize(.small) }
                     Text(library.progress).font(.callout).lineLimit(2)
                     Spacer()
-                    if library.busy { Button("Cancel Installation") { library.cancelInstallation() } }
+                    if library.canCancelInstallation { Button("Cancel Installation") { library.cancelInstallation() } }
                 }.padding().background(.bar)
             }
         }

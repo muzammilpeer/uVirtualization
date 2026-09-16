@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import LocalAuthentication
 
 public struct RegistryCredential: Codable {
     public var username: String
@@ -31,7 +32,9 @@ public enum RegistryCredentials {
         var query = query(host)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
-        query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail
+        let context = LAContext()
+        context.interactionNotAllowed = true
+        query[kSecUseAuthenticationContext as String] = context
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }
