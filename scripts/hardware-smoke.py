@@ -32,10 +32,12 @@ with open(root / '.build/hardware-runtime.log', 'w') as log:
         invoke('resume', name)
         assert json.loads(invoke('status', name))['state'] == 'running'
         if args.macos:
+            print('macOS runtime started; allowing guest boot before shutdown', flush=True)
+            time.sleep(60)
             invoke('stop', name)
         else:
             invoke('stop', name, '--force')
-        assert process.wait(timeout=30) == 0
+        assert process.wait(timeout=120) == 0
         assert json.loads(invoke('status', name))['state'] == 'stopped'
         print(('macOS installed guest' if args.macos else 'Blank EFI guest') + ': start, status, pause, resume, stop: PASS')
     finally:

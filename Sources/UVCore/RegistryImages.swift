@@ -20,6 +20,10 @@ public enum RegistryImages {
         let result = PulledImage(reference: reference.description, digest: digest, cacheName: name)
         let cache = cacheStore(store)
         if (try? cache.load(name)) != nil { return result }
+        for layer in manifest.layers {
+            let metadataLimit: Int64 = layer.mediaType == "application/vnd.cirruslabs.tart.config.v1" ? 16_777_216 : 268_435_456
+            if !layer.mediaType.contains(".disk."), layer.size > metadataLimit { throw UVError("VM metadata exceeds supported size limit.") }
+        }
         let stage = try cache.stage(name)
         defer { try? FileManager.default.removeItem(at: stage) }
         let blobs = store.root.appendingPathComponent(".cache/blobs")
@@ -47,7 +51,7 @@ public enum RegistryImages {
             case "application/vnd.cirruslabs.tart.config.v1", "application/vnd.cirruslabs.tart.nvram.v1":
                 guard isTart else { throw UVError("Mixed image formats.") }
                 let filename = layer.mediaType.contains("config") ? "tart.json" : "nvram.bin"
-                guard seen.insert(filename).inserted, layer.size <= 16_777_216 else { throw UVError("Duplicate or oversized metadata layer.") }
+                guard seen.insert(filename).inserted, layer.size <= (filename == "tart.json" ? 16_777_216 : 268_435_456) else { throw UVError("Duplicate or oversized metadata layer.") }
                 try FileManager.default.copyItem(at: blob, to: stage.appendingPathComponent(filename))
             case "application/vnd.uvirtualization.disk.v2":
                 guard !isTart, let text = layer.annotations?["org.uvirtualization.uncompressed-size"], let size = UInt64(text), size > 0, size <= 1_073_741_824,
@@ -66,7 +70,7 @@ public enum RegistryImages {
                 guard diskOffset <= 1_099_511_627_776 else { throw UVError("Image exceeds 1 TiB import limit.") }
             case "application/vnd.uvirtualization.artifact.v1":
                 guard !isTart, let filename = layer.annotations?["org.uvirtualization.filename"], VMArchive.allowedFiles.contains(filename), filename != "disk.img",
-                      seen.insert(filename).inserted, layer.size <= 16_777_216 else { throw UVError("Invalid VM artifact.") }
+                      seen.insert(filename).inserted, layer.size <= (filename == "config.json" ? 16_777_216 : 268_435_456) else { throw UVError("Invalid VM artifact.") }
                 try FileManager.default.copyItem(at: blob, to: stage.appendingPathComponent(filename))
             default: throw UVError("Unsupported VM layer format: \(layer.mediaType)")
             }

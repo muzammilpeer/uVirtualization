@@ -4,6 +4,7 @@ import Compression
 extension RegistryImages {
     public static func push(store: VMStore, name: String, reference: OCIReference, progress: @escaping (String) -> Void = { _ in }) async throws {
         let lock = try store.lock(name); defer { lock.unlock() }
+        try store.requireNoSavedState(name)
         let model = try store.load(name)
         guard model.state == "ready" else { throw UVError("Only installed VMs can be published.") }
         let directory = try store.directory(name)

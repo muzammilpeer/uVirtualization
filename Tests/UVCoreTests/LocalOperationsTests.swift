@@ -48,3 +48,20 @@ final class LocalOperationsTests: XCTestCase {
         XCTAssertThrowsError(try VMArchive.importVM(store: store, from: archive, name: "bad"))
     }
 }
+
+final class SavedStateSafetyTests: XCTestCase {
+    func testSuspendedVMRejectsOfflineMutation() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = VMStore(root: root)
+        try store.create(VMConfiguration(name: "vm"))
+        let states = root.appendingPathComponent(".states")
+        try FileManager.default.createDirectory(at: states, withIntermediateDirectories: true)
+        try Data("state".utf8).write(to: states.appendingPathComponent("vm.bin"))
+        XCTAssertEqual(try RuntimeControl.status(store: store, name: "vm").state, "suspended")
+        XCTAssertThrowsError(try store.configure("vm", cpu: 2))
+        XCTAssertThrowsError(try store.clone("vm", to: "other"))
+        XCTAssertThrowsError(try store.rename("vm", to: "other"))
+        XCTAssertThrowsError(try store.delete("vm"))
+    }
+}

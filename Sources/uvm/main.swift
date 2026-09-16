@@ -81,7 +81,7 @@ func run() async throws {
     case "status":
         guard rest.count == 1 else { throw UVError("Usage: uvm status NAME") }
         try printJSON(RuntimeControl.status(store: store, name: rest[0]))
-    case "stop", "pause", "resume":
+    case "stop", "pause", "resume", "suspend":
         guard rest.count == 1 || (command == "stop" && rest.count == 2 && rest[1] == "--force") else { throw UVError("Usage: uvm \(command) NAME" + (command == "stop" ? " [--force]" : "")) }
         try await RuntimeControl.send(store: store, name: rest[0], command: rest.contains("--force") ? "force-stop" : command)
         try printJSON(RuntimeControl.status(store: store, name: rest[0]))
@@ -197,6 +197,7 @@ Usage: uvm COMMAND
   status NAME                    Report runtime state
   stop NAME [--force]             Request shutdown or force stop
   pause NAME / resume NAME        Control execution
+  suspend NAME                   Save state on compatible macOS 14+ guests
   create NAME --linux [--disk GiB]
                                  Prepare an ARM64 EFI guest for ISO installation
   install-rosetta                Install Apple Rosetta support for Linux guests

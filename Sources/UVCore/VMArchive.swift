@@ -21,6 +21,7 @@ public enum VMArchive {
     private struct Header: Codable { var version: Int; var files: [Entry] }
     public static func export(store: VMStore, name: String, to destination: URL) throws {
         let lock = try store.lock(name); defer { lock.unlock() }
+        try store.requireNoSavedState(name)
         _ = try store.load(name)
         let directory = try store.directory(name)
         let entries = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.fileSizeKey])

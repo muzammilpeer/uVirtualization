@@ -22,7 +22,7 @@ public enum RuntimeControl {
         _ = try store.load(name)
         if let lock = try? store.lock(name) {
             lock.unlock()
-            return RuntimeStatus(name: name, state: "stopped", processID: 0, session: "")
+            return RuntimeStatus(name: name, state: FileManager.default.fileExists(atPath: store.root.appendingPathComponent(".states/" + name + ".bin").path) ? "suspended" : "stopped", processID: 0, session: "")
         }
         let url = try directory(store: store, name: name).appendingPathComponent("status.json")
         guard let data = try? Data(contentsOf: url), let status = try? JSONDecoder().decode(RuntimeStatus.self, from: data) else {
@@ -31,7 +31,7 @@ public enum RuntimeControl {
         return status
     }
     public static func send(store: VMStore, name: String, command: String, timeout: Double = 30) async throws {
-        guard ["stop", "force-stop", "pause", "resume"].contains(command) else { throw UVError("Invalid lifecycle command.") }
+        guard ["stop", "force-stop", "pause", "resume", "suspend"].contains(command) else { throw UVError("Invalid lifecycle command.") }
         let state = try status(store: store, name: name)
         guard !state.session.isEmpty else { throw UVError("VM is not accepting runtime commands (\(state.state)).") }
         let request = ControlRequest(id: UUID().uuidString, session: state.session, command: command)

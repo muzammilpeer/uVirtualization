@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix='uvm-cli-') as folder:
     assert len(json.loads(run('list'))) == 3
     assert json.loads(run('status', 'one'))['state'] == 'stopped'
     run('delete', 'three')
-    for args in [('init', 'one'), ('init', '../bad'), ('set', 'one', '--disk', '1'), ('init', 'bad', '--cpu', 'x'), ('init', 'bad', '--cpu', '2', '--cpu', '4'), ('run', 'one'), ('stop', 'one'), ('unknown',), ('init', 'bad', '--weird'), ('image-info', 'http://bad/image')]:
+    for args in [('init', 'one'), ('init', '../bad'), ('set', 'one', '--disk', '1'), ('init', 'bad', '--cpu', 'x'), ('init', 'bad', '--cpu', '2', '--cpu', '4'), ('run', 'one', '--headless'), ('stop', 'one'), ('unknown',), ('init', 'bad', '--weird'), ('image-info', 'http://bad/image')]:
         run(*args, ok=False)
     for shell in ['bash', 'zsh', 'fish']: assert 'uvm' in run('completions', shell)
     run('help'); run('version')

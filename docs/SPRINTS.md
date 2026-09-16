@@ -13,7 +13,7 @@ Work sequentially. Each sprint ends with build/test evidence and an honest statu
 | 07 | OCI publishing and cache | Keychain auth, push, retries, cancellation, prune under concurrent use | Implemented; private registry acceptance pending |
 | 08 | ARM Linux | ISO install, EFI persistence, serial console, guest-specific devices | Implemented; distribution install acceptance pending |
 | 09 | Native app | Shared library, wizard, settings, VM windows, lifecycle errors | Implemented; UI acceptance partially verified |
-| 10 | Automation and parity audit | Version-pinned Tart command matrix, JSON/completions, CI examples; close gaps | Planned |
+| 10 | Automation and parity audit | Version-pinned Tart command matrix, JSON/completions, CI examples; close gaps | Automation implemented; parity gaps documented |
 | 11 | Release engineering | M1 hardware suite, signed/notarized artifacts, Homebrew recipe and upgrade tests | Planned |
 | 12+ | Extensions | Remote control, pools and multi-host orchestration separately specified | Backlog |
 
@@ -65,3 +65,7 @@ Added Linux EFI machine creation, virtio graphics/balloon, ISO attachment, seria
 ## Sprint 09 implementation — 2026-09-16
 
 Added native SwiftUI library, creation/import forms, resource editor, clone/delete actions, runtime controls, guest-access options and quit protection. Nineteen tests pass; the development-signed app bundle verifies. Launched the app and visually inspected the library and creation form. macOS latest restore installation completed successfully on this host with a 32 GiB sparse disk in `.build/acceptance-vms/acceptance-macos`; remaining guest checks follow.
+
+## Sprint 10 implementation — 2026-09-16
+
+Added SSH exec with argument quoting/host verification, get/fqn, completions, JSON error mode, cancellation, saved-state suspend/restore with offline mutation protection, CI/manual smoke scripts and pinned parity audit. Twenty-one unit tests and 26 CLI scenarios pass. Real image testing found a 32 MiB firmware artifact; the adapter limit was corrected and metadata checks moved before disk transfers. See PARITY.md for unresolved compatibility requirements. An existing user-side Sprint 10 commit was preserved; this commit records the additional automation and audit work.

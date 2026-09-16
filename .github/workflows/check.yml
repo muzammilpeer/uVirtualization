@@ -1,0 +1,17 @@
+name: Swift development checks
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and unit tests
+        run: ./scripts/check.sh
+      - name: CLI smoke checks
+        run: python3 scripts/cli-smoke.py
+      - name: Development app bundle
+        run: ./scripts/package-dev.sh

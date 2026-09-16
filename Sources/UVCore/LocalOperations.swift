@@ -2,9 +2,15 @@ import Foundation
 import Virtualization
 
 extension VMStore {
+    public func requireNoSavedState(_ name: String) throws {
+        guard !FileManager.default.fileExists(atPath: root.appendingPathComponent(".states/" + name + ".bin").path) else {
+            throw UVError("VM is suspended. Run it and shut it down before changing, cloning, exporting or deleting it.")
+        }
+    }
     public func configure(_ name: String, cpu: Int? = nil, memory: Int? = nil, disk: Int? = nil,
                           width: Int? = nil, height: Int? = nil) throws {
         let lock = try lock(name); defer { lock.unlock() }
+        try requireNoSavedState(name)
         var model = try load(name)
         if let cpu { model.cpuCount = cpu }
         if let memory { model.memoryMiB = memory }
@@ -34,6 +40,7 @@ extension VMStore {
 
     public func delete(_ name: String) throws {
         let lock = try lock(name); defer { lock.unlock() }
+        try requireNoSavedState(name)
         _ = try load(name)
         // Move out of the inventory atomically before removing its data.
         let trash = root.appendingPathComponent(".trash/" + UUID().uuidString)
@@ -46,6 +53,7 @@ extension VMStore {
         guard source != destination else { throw UVError("Source and destination must differ.") }
         let locks = try [source, destination].sorted().map { try lock($0) }
         defer { locks.forEach { $0.unlock() } }
+        try requireNoSavedState(source)
         var model = try load(source)
         let sourceURL = try directory(source)
         let stage = try stage(destination)
@@ -67,6 +75,7 @@ extension VMStore {
         guard source != destination else { throw UVError("Source and destination must differ.") }
         let locks = try [source, destination].sorted().map { try lock($0) }
         defer { locks.forEach { $0.unlock() } }
+        try requireNoSavedState(source)
         var model = try load(source)
         let destinationURL = try directory(destination)
         guard !FileManager.default.fileExists(atPath: destinationURL.path) else { throw UVError("Destination already exists.") }

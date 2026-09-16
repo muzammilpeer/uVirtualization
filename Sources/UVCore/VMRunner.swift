@@ -4,10 +4,13 @@ import Virtualization
 @MainActor
 public final class VMRunner: NSObject, VZVirtualMachineDelegate, NSWindowDelegate {
     public let machine: VZVirtualMachine
+    private let configuration: VZVirtualMachineConfiguration
     public let name: String
     private let ownership: FileLock
     private let controlDirectory: URL
     private let session = UUID().uuidString
+    private let savedState: URL
+    private let defaultDevices: Bool
     private var window: NSWindow?
     private var stopped = false
     private var failure: Error?
@@ -15,10 +18,13 @@ public final class VMRunner: NSObject, VZVirtualMachineDelegate, NSWindowDelegat
 
     public init(store: VMStore, name: String, options: RuntimeOptions = RuntimeOptions()) throws {
         self.name = name
+        savedState = store.root.appendingPathComponent(".states/" + name + ".bin")
+        defaultDevices = options.directories.isEmpty && options.bridge == nil && !options.audio && !options.clipboard && options.additionalDisks.isEmpty && !options.serial && !options.rosetta
         ownership = try store.lock(name)
         let model = try store.load(name)
         guard model.state == "ready" else { throw UVError("VM is a draft; install a guest first.") }
-        machine = VZVirtualMachine(configuration: try VirtualMachineFactory.configuration(model, directory: store.directory(name), options: options))
+        configuration = try VirtualMachineFactory.configuration(model, directory: store.directory(name), options: options)
+        machine = VZVirtualMachine(configuration: configuration)
         controlDirectory = try RuntimeControl.directory(store: store, name: name)
         super.init()
         machine.delegate = self
@@ -38,7 +44,15 @@ public final class VMRunner: NSObject, VZVirtualMachineDelegate, NSWindowDelegat
             ownership.unlock()
         }
         try writeStatus("starting")
-        try await machine.start()
+        if FileManager.default.fileExists(atPath: savedState.path) {
+            guard defaultDevices else { throw UVError("Resume saved state with default device options.") }
+            if #available(macOS 14, *) {
+                try configuration.validateSaveRestoreSupport()
+                try await machine.restoreMachineStateFrom(url: savedState)
+                try await machine.resume()
+                try FileManager.default.removeItem(at: savedState)
+            } else { throw UVError("Saved-state restore requires macOS 14 or later.") }
+        } else { try await machine.start() }
         try writeStatus("running")
         if !headless { showWindow() }
         controlTask = Task { [weak self] in
@@ -55,6 +69,26 @@ public final class VMRunner: NSObject, VZVirtualMachineDelegate, NSWindowDelegat
 
     public func control(_ command: String) async throws {
         switch command {
+        case "suspend":
+            guard defaultDevices else { throw UVError("Suspend currently requires default device options.") }
+            if #available(macOS 14, *) {
+                try configuration.validateSaveRestoreSupport()
+                try FileManager.default.createDirectory(at: savedState.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+                let partial = savedState.appendingPathExtension("partial")
+                try? FileManager.default.removeItem(at: partial)
+                let wasRunning = machine.canPause
+                if wasRunning { try await machine.pause() }
+                do {
+                    try await machine.saveMachineStateTo(url: partial)
+                    try FileManager.default.moveItem(at: partial, to: savedState)
+                    try await machine.stop()
+                    stopped = true
+                } catch {
+                    try? FileManager.default.removeItem(at: partial)
+                    if wasRunning, machine.canResume { try? await machine.resume() }
+                    throw error
+                }
+            } else { throw UVError("Suspend requires macOS 14 or later.") }
         case "pause":
             guard machine.canPause else { throw UVError("VM cannot pause in its current state.") }
             try await machine.pause()
