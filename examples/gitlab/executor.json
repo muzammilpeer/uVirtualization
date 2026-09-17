@@ -1,0 +1,17 @@
+{
+  "runnerID": "muzammilpeer-home",
+  "uvmPath": "/Users/muzammilpeer/Git/uVirtualization/.build/uVirtualization.app/Contents/MacOS/uvm",
+  "storePath": "/Users/muzammilpeer/.uvm",
+  "image": "ci-base",
+  "ssh": {
+    "user": "builder",
+    "identityFile": "/Users/muzammilpeer/.ssh/uvm_gitlab",
+    "knownHostsFile": "/Users/muzammilpeer/.ssh/uvm_gitlab_known_hosts",
+    "hostKeyAlias": "uvm-ci-base"
+  },
+  "readinessURLs": ["https://gitlab.muzammilpeer.uk/"],
+  "readinessTimeout": 180,
+  "buildsDirectory": "/tmp/uvm-builds",
+  "cacheDirectory": "/tmp/uvm-cache",
+  "stageTimeout": 3600
+}

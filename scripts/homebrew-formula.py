@@ -23,6 +23,7 @@ formula = f'''class Uvm < Formula
   def install
     libexec.install "uVirtualization.app"
     bin.install_symlink libexec/"uVirtualization.app/Contents/MacOS/uvm"
+    bin.install_symlink libexec/"uVirtualization.app/Contents/MacOS/gitlab-uvm-executor"
   end
 
   test do

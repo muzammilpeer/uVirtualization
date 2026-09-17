@@ -60,7 +60,7 @@ func run() async throws {
         try await GuestCommand.execute(address: ip, user: user, arguments: Array(rest.dropFirst(separator + 1)))
     case "completions":
         guard rest.count == 1 else { throw UVError("Usage: uvm completions bash|zsh|fish") }
-        let commands = "create init clone run set get inspect list status login logout ip exec pull push import export prune rename stop pause resume suspend delete fqn doctor repair version help serve"
+        let commands = "create init clone run set get inspect list status login logout ip exec pull push import export prune rename stop pause resume suspend delete fqn doctor repair version help serve ready"
         switch rest[0] {
         case "bash": print("complete -W '\(commands)' uvm")
         case "zsh": print("#compdef uvm\n_arguments '1:command:(\(commands))' '*:file:_files'")
@@ -121,6 +121,16 @@ func run() async throws {
         guard rest.count == 1 else { throw UVError("Usage: uvm pull REGISTRY/IMAGE:TAG") }
         let image = try await RegistryImages.pull(OCIReference(rest[0]), store: store) { message in UVLog.emit(message) }
         try printJSON(image)
+    case "ready":
+        let args = try Arguments(rest, values: ["--user", "--identity", "--known-hosts", "--host-key-alias", "--url", "--timeout"], repeated: ["--url"])
+        try args.require(1)
+        guard let user = args.value("--user"), let identity = args.value("--identity"),
+              let hosts = args.value("--known-hosts"), let alias = args.value("--host-key-alias") else {
+            throw UVError("ready requires --user, --identity, --known-hosts, --host-key-alias and --url.")
+        }
+        let ssh = try GuestSSH(user: user, identityFile: identity, knownHostsFile: hosts, hostKeyAlias: alias)
+        let address = try await GuestReadiness.wait(store: store, name: args.positional[0], ssh: ssh, endpoints: args.options["--url"] ?? [], timeout: Double(try args.int("--timeout") ?? 180)) { UVLog.emit($0) }
+        try printJSON(["name": args.positional[0], "address": address, "state": "network-ready"])
     case "ip":
         let args = try Arguments(rest, values: ["--timeout"])
         try args.require(1)
@@ -205,6 +215,7 @@ Usage: uvm COMMAND
   delete NAME                    Delete a stopped VM and its disks
   export NAME FILE.uvma           Export a checked archive
   import FILE.uvma NAME           Import with fresh identity
+  ready NAME --user USER --identity PATH --known-hosts PATH --host-key-alias NAME --url HTTPS_URL [--timeout SECONDS]
   ip NAME [--timeout SECONDS]     Discover NAT guest address
   run NAME [--headless] [--dir NAME=PATH:ro|:rw] [--bridge IFACE]
            [--audio] [--clipboard] [--disk READ_ONLY_IMAGE]

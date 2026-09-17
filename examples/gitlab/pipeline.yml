@@ -1,0 +1,27 @@
+stages: [verify, consume]
+
+checkout-and-network:
+  stage: verify
+  tags: [uvm]
+  script:
+    - test -d .git
+    - git rev-parse --verify HEAD
+    - curl --fail --silent --show-error --output /dev/null --max-time 20 https://gitlab.muzammilpeer.uk/
+    - mkdir -p .uvm-cache
+    - printf 'cache from %s\n' "$CI_JOB_ID" > .uvm-cache/probe.txt
+    - printf 'artifact from %s\n' "$CI_JOB_ID" > uvm-artifact.txt
+  cache:
+    key: uvm-acceptance
+    paths: [.uvm-cache/]
+  artifacts:
+    paths: [uvm-artifact.txt]
+
+consume-artifact:
+  stage: consume
+  tags: [uvm]
+  needs:
+    - job: checkout-and-network
+      artifacts: true
+  script:
+    - test -s uvm-artifact.txt
+    - cat uvm-artifact.txt

@@ -16,6 +16,7 @@ Work sequentially. Each sprint ends with build/test evidence and an honest statu
 | 10 | Automation and parity audit | Version-pinned Tart command matrix, JSON/completions, CI examples; close gaps | Automation implemented; parity gaps documented |
 | 11 | Release engineering | M1 hardware suite, signed/notarized artifacts, Homebrew recipe and upgrade tests | Development packaging complete; release gates deferred/open |
 | 12 | Extension foundation | Token-protected local control API and future orchestration specification | Implemented; local API smoke passed |
+| 13 | GitLab Runner and network readiness | Isolated job VMs, guest HTTPS gate before checkout, bounded recovery, executor contract and live pipeline acceptance | Implemented; local contract and negative hardware checks passed; live runner acceptance pending |
 | Future | Multi-host orchestration | Enrollment, scheduling, pools, isolation and recovery | Separate product backlog |
 
 ## Sprint 01 scope
@@ -84,3 +85,11 @@ Implemented a token-protected loopback HTTP API for inventory, host diagnostics 
 Added journaled interrupted-rename recovery, explicit APFS cloning with filesystem fallback, structured progress logging, host-model diagnostics, regular-file checks and installer cancellation handling. Registry upload tests cover chunk submission, digest commit and rejection of cross-origin upload locations. Linux validation now handles smaller guests and decimal-GB registry disks consistently in the CLI, app and Tart adapter. Both termination signals cancel macOS installation.
 
 All 31 unit tests and 26 CLI checks pass; signed low-resource Linux creation and the authenticated API smoke pass. Real pinned Tahoe and public Ubuntu OCI imports succeed. Tahoe passes runtime start, NAT lease, pause, resume and force stop. Ubuntu also reaches SSH service readiness and passes pause/resume, but its graceful shutdown test times out after 120 seconds; cleanup force-stops it. Apple saved-state persistence returns permission denied and macOS graceful shutdown remains unresolved. These are open acceptance items, not completed exits. The optimized development package and Homebrew formula are regenerated; final production signing remains deferred by the user.
+
+## Sprint 13 implementation — 2026-09-17
+
+Added the Swift `gitlab-uvm-executor` driver and shared `uvm ready` guest network gate. Each job gets a fresh clone, unique MAC, ownership journal and detached runtime session. Trusted job response identity prevents project variables selecting host paths. Preparation verifies guest SSH and two consecutive guest HTTPS rounds plus CI tools. Checkout/cache/artifact stages recheck connectivity. Bounded retries fail closed; user scripts are not replayed by the driver. Cleanup reclaims only the job-owned clone and is idempotent.
+
+Forty-four unit tests and 26 CLI checks pass. Executor binary contract checks pass. A real Ubuntu clone test verifies runtime survival across driver calls, blocked checkout without SSH trust, forced cleanup and base preservation. The first hardware test caught a process-group issue; the runtime now uses a new POSIX session directly. No successful guest Internet/checkout pass is claimed without live runner provisioning.
+
+Development packaging includes the executor and its Homebrew link. Setup examples target the user's GitLab server at `https://gitlab.muzammilpeer.uk/`. User will register the runner and provide prepared guest/SSH paths; live checkout, artifacts/cache, cancellation and concurrent-job acceptance remain pending. Earlier sprint acceptance failures remain open.

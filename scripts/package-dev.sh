@@ -8,6 +8,7 @@ app="$PWD/.build/uVirtualization.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp ".build/$configuration/uVirtualization" "$app/Contents/MacOS/uVirtualization"
 cp ".build/$configuration/uvm" "$app/Contents/MacOS/uvm"
+cp ".build/$configuration/gitlab-uvm-executor" "$app/Contents/MacOS/gitlab-uvm-executor"
 cat > "$app/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -23,6 +24,7 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 </dict></plist>
 PLIST
 codesign --force --sign "${SIGNING_IDENTITY:--}" --entitlements Resources/uvm.entitlements "$app/Contents/MacOS/uvm"
+codesign --force --sign "${SIGNING_IDENTITY:--}" --entitlements Resources/uvm.entitlements "$app/Contents/MacOS/gitlab-uvm-executor"
 codesign --force --sign "${SIGNING_IDENTITY:--}" --entitlements Resources/uvm.entitlements "$app"
 codesign --verify --deep --strict "$app"
 printf '%s\n' "$app"

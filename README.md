@@ -80,6 +80,10 @@ Push writes uvm's native OCI format. `.uvma` is a checksum-protected uvm archive
 
 Data lives in `~/.uvm`; `UVM_HOME` selects a different inventory. The app also offers **File → Choose VM Storage**. Failed macOS installations retain their files under `.staging` with `failure.txt`. `init NAME` creates only a configuration draft, not a bootable VM.
 
+## GitLab Runner
+
+The development bundle includes `gitlab-uvm-executor`. It creates an isolated VM for each job and checks authenticated guest HTTPS connectivity before checkout. See the [setup guide](docs/GITLAB_RUNNER.md) and [runner examples](examples/gitlab/config.toml). Live GitLab acceptance is pending runner and guest provisioning.
+
 ## Plan and validation
 
 - [Requirements](docs/REQUIREMENTS.md)

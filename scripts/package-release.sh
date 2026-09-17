@@ -12,6 +12,7 @@ BUILD_CONFIGURATION=release ./scripts/package-dev.sh
 app="$PWD/.build/uVirtualization.app"
 if [ "$mode" = '--notarize' ]; then
   codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" --entitlements Resources/uvm.entitlements "$app/Contents/MacOS/uvm"
+  codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" --entitlements Resources/uvm.entitlements "$app/Contents/MacOS/gitlab-uvm-executor"
   codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" --entitlements Resources/uvm.entitlements "$app"
 fi
 mkdir -p dist

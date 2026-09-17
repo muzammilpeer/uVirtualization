@@ -1,0 +1,27 @@
+# Merge these settings into the runner entry created by `gitlab-runner register`.
+# Keep the registration-generated authentication token; no token is stored here.
+concurrent = 1
+
+[[runners]]
+  name = "uVirtualization"
+  url = "https://gitlab.muzammilpeer.uk/"
+  executor = "custom"
+  shell = "bash"
+  builds_dir = "/tmp/uvm-builds"
+  cache_dir = "/tmp/uvm-cache"
+  environment = ["GET_SOURCES_ATTEMPTS=3", "RESTORE_CACHE_ATTEMPTS=3", "ARTIFACT_DOWNLOAD_ATTEMPTS=3"]
+
+  [runners.custom]
+    config_exec = "/Users/muzammilpeer/Git/uVirtualization/.build/uVirtualization.app/Contents/MacOS/gitlab-uvm-executor"
+    config_args = ["config", "--config", "/Users/muzammilpeer/Git/uVirtualization/examples/gitlab/executor.json"]
+    config_exec_timeout = 30
+    prepare_exec = "/Users/muzammilpeer/Git/uVirtualization/.build/uVirtualization.app/Contents/MacOS/gitlab-uvm-executor"
+    prepare_args = ["prepare", "--config", "/Users/muzammilpeer/Git/uVirtualization/examples/gitlab/executor.json"]
+    prepare_exec_timeout = 1800
+    run_exec = "/Users/muzammilpeer/Git/uVirtualization/.build/uVirtualization.app/Contents/MacOS/gitlab-uvm-executor"
+    run_args = ["run", "--config", "/Users/muzammilpeer/Git/uVirtualization/examples/gitlab/executor.json"]
+    cleanup_exec = "/Users/muzammilpeer/Git/uVirtualization/.build/uVirtualization.app/Contents/MacOS/gitlab-uvm-executor"
+    cleanup_args = ["cleanup", "--config", "/Users/muzammilpeer/Git/uVirtualization/examples/gitlab/executor.json"]
+    cleanup_exec_timeout = 60
+    graceful_kill_timeout = 30
+    force_kill_timeout = 10

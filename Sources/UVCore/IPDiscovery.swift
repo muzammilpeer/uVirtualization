@@ -20,12 +20,20 @@ public enum IPDiscovery {
         }
         return nil
     }
+    public static func readLeases(at path: String = "/var/db/dhcpd_leases") throws -> String {
+        do { return try String(contentsOfFile: path, encoding: .utf8) }
+        catch let error as CocoaError where error.code == .fileReadNoSuchFile { return "" }
+    }
+    public static func lookup(store: VMStore, name: String) async throws -> String? {
+        guard let mac = try store.load(name).macAddress else { throw UVError("VM has no network identity.") }
+        return address(in: try readLeases(), mac: mac)
+    }
     public static func wait(store: VMStore, name: String, timeout: Double = 30) async throws -> String {
         guard timeout.isFinite, (0...3600).contains(timeout) else { throw UVError("Timeout must be 0–3600 seconds.") }
         guard let mac = try store.load(name).macAddress else { throw UVError("VM has no network identity.") }
         let deadline = Date().addingTimeInterval(timeout)
         repeat {
-            let leases = try String(contentsOfFile: "/var/db/dhcpd_leases", encoding: .utf8)
+            let leases = try readLeases()
             if let address = address(in: leases, mac: mac) { return address }
             if Date() >= deadline { break }
             try await Task.sleep(nanoseconds: 500_000_000)

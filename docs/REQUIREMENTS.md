@@ -33,6 +33,7 @@ Build an independent Swift VM manager for Apple silicon, starting with M1. Provi
 | F15 | Automation | Stable exit codes, JSON output, noninteractive mode, timeouts, structured logs, shell completion and CI examples. |
 | F16 | Distribution | Signed app/CLI, notarized releases, reproducible packaging, Homebrew tap, upgrades and migration guidance. |
 | F17 | Future extension | Backend/guest/image-store boundaries; remote API, VM pools, CI runners and multi-host scheduling as separate post-parity work. |
+| F18 | GitLab Runner | Custom executor lifecycle, isolated clones, authenticated guest network readiness before checkout, bounded retries, failure classification and cleanup; live checkout/cache/artifact acceptance. |
 
 ## Reliability and safety
 

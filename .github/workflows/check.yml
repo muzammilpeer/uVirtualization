@@ -13,5 +13,6 @@ jobs:
         run: ./scripts/check.sh
       - name: CLI smoke checks
         run: python3 scripts/cli-smoke.py
+      - run: python3 scripts/gitlab-contract-smoke.py
       - name: Development app bundle
         run: ./scripts/package-dev.sh

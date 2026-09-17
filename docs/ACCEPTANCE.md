@@ -5,7 +5,7 @@ Date: 2026-09-17. Host reports arm64, 10 CPUs, 16 GiB RAM, macOS 27.0 build 26A4
 | Check | Evidence/status |
 |---|---|
 | Swift debug build | Passed |
-| Unit tests | 31 passed, zero failures |
+| Unit tests | 44 passed, zero failures |
 | CLI smoke checks | 26 passed |
 | Development signing | codesign strict verification passed |
 | Virtualization entitlement | Signed doctor outside sandbox reports supported |
@@ -24,6 +24,9 @@ Date: 2026-09-17. Host reports arm64, 10 CPUs, 16 GiB RAM, macOS 27.0 build 26A4
 | Bridging | Requires Apple entitlement; not covered by development signing |
 | Suspend/restore | Apple save API returns permission denied on this host; VM resumes after failure; successful restore acceptance blocked |
 | Release packaging | Optimized development ZIP, signature, checksum and formula syntax passed |
+| GitLab executor contract | Config/prepare/run/cleanup, readiness failure, transport/build exit distinction, job isolation and interrupted prepare tests passed |
+| GitLab hardware negative test | Real Ubuntu job clone survives prepare exit; missing SSH trust blocks checkout; cleanup and repeated cleanup preserve base |
+| Live GitLab pipeline | Pending user runner registration and guest SSH provisioning |
 | Notarization/publication | Deferred by user until final build |
 
 Scripts: `scripts/check.sh`, `scripts/cli-smoke.py`, `scripts/hardware-smoke.py`, `scripts/api-smoke.py` and `scripts/imported-guest-smoke.py --store PATH --name NAME [--graceful]`. Imported-guest checks require an explicitly selected disposable guest and verify runtime state and DHCP lease; they do not assert desktop/input or guest application health. Hardware scripts use isolated `.build` stores. CLI tests use temporary stores and never alter the default inventory.
