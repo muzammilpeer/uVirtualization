@@ -8,11 +8,11 @@ This is a workflow-level audit, not a claim of flag-for-flag compatibility. uvm 
 |---|---|---|
 | create macOS | local IPSW or latest supported restore | Installation passed on the development host; interrupted-install hardware acceptance pending |
 | create Linux | ARM64 EFI and ISO | EFI runtime passed; distribution installation pending |
-| clone | local and OCI | New hardware/network identities; real Tart image acceptance in progress |
+| clone | local and OCI | New hardware/network identities; real Tahoe and Ubuntu image imports verified |
 | run | native guest window or headless | Default NAT; optional audio, clipboard, folders, ISO disks, serial and Rosetta |
 | set/get/list | configure/inspect (get alias)/list | JSON inventory; resource units MiB/GiB |
 | stop | graceful request and --force | Graceful shutdown depends on guest readiness; request acceptance is not shutdown completion |
-| suspend | Apple saved-state APIs on macOS 14+ | Default device set only; host compatibility checked by Apple; guest acceptance pending |
+| suspend | Apple saved-state APIs on macOS 14+ | Default device set only; permission-denied save failure on acceptance host remains unresolved |
 | pause/resume | live runtime control | Additional uvm commands |
 | login/logout | Keychain and scoped environment credentials | Bearer-token registry flow; Docker credential helper and direct Basic challenge support pending |
 | pull/push | verified OCI blobs, native compressed image publishing | Pull reads Tart raw-disk v2 LZ4 images; push currently writes uvm media types |
@@ -31,7 +31,7 @@ This is a workflow-level audit, not a claim of flag-for-flag compatibility. uvm 
 - Clipboard requires compatible guest agent support; adding a virtual port alone does not install guest software.
 - Restarted downloads reuse verified blobs; partial-blob byte resume is not yet implemented.
 - Native OCI push round trip against a credentialed registry remains unverified.
-- Crash recovery for interrupted rename and OS/firmware upgrades needs release testing.
+- Journaled rename recovery is covered by fault-state unit tests; real power-loss and OS/firmware upgrade acceptance still needs release testing.
 - Hosted CI runners and Orchard-style multi-host orchestration are separate extensions, not local Tart CLI parity.
 
 ## Hardware evidence

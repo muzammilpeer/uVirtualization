@@ -58,3 +58,20 @@ final class VMStoreTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: store.root.path))
     }
 }
+
+final class GuestResourceTests: XCTestCase {
+    func testLinuxAndMacMinimumsDiffer() throws {
+        // A 20 GB registry disk is 19 GiB when rounded up, not 20 GiB.
+        XCTAssertNoThrow(try VMConfiguration(name: "ubuntu", diskGiB: 19, guest: "linux"))
+        XCTAssertThrowsError(try VMConfiguration(name: "linux", diskGiB: 0, guest: "linux"))
+        XCTAssertThrowsError(try VMConfiguration(name: "mac", diskGiB: 19))
+        XCTAssertNoThrow(try VMConfiguration(name: "linux", memoryMiB: 1024, guest: "linux"))
+        XCTAssertThrowsError(try VMConfiguration(name: "mac", memoryMiB: 1024))
+        var model = try VMConfiguration(name: "vm")
+        model.macAddress = "not-a-mac"
+        XCTAssertThrowsError(try model.validate())
+        model.macAddress = nil
+        model.minimumCPUCount = -1
+        XCTAssertThrowsError(try model.validate())
+    }
+}

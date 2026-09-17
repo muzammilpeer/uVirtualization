@@ -21,7 +21,7 @@ extension VMStore {
             model.diskGiB = disk
         }
         try model.validate()
-        guard model.cpuCount >= (model.minimumCPUCount ?? 1), model.memoryMiB >= (model.minimumMemoryMiB ?? 4096) else {
+        guard model.cpuCount >= (model.minimumCPUCount ?? 1), model.memoryMiB >= (model.minimumMemoryMiB ?? (model.guest == "macOS" ? 4096 : 512)) else {
             throw UVError("Resources are below the installed guest's minimum requirements.")
         }
         let dir = try directory(name)
@@ -61,8 +61,7 @@ extension VMStore {
             for file in try FileManager.default.contentsOfDirectory(at: sourceURL, includingPropertiesForKeys: nil) {
                 guard VMArchive.allowedFiles.contains(file.lastPathComponent) else { throw UVError("Unknown VM artifact: \(file.lastPathComponent)") }
                 try requireRegularFile(file)
-                // Foundation uses clonefile on supporting filesystems, falling back to a copy.
-                try FileManager.default.copyItem(at: file, to: stage.appendingPathComponent(file.lastPathComponent))
+                try copyArtifact(from: file, to: stage.appendingPathComponent(file.lastPathComponent))
             }
             model.name = destination
             try renewIdentity(model: &model, directory: stage)
@@ -80,10 +79,18 @@ extension VMStore {
         let destinationURL = try directory(destination)
         guard !FileManager.default.fileExists(atPath: destinationURL.path) else { throw UVError("Destination already exists.") }
         let sourceURL = try directory(source)
-        model.name = destination
-        try save(model, at: sourceURL)
-        do { try FileManager.default.moveItem(at: sourceURL, to: destinationURL) }
-        catch { model.name = source; try? save(model, at: sourceURL); throw error }
+        let journals = root.appendingPathComponent(".transactions")
+        try FileManager.default.createDirectory(at: journals, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        let journal = journals.appendingPathComponent(UUID().uuidString + ".json")
+        try JSONEncoder().encode(RenameTransaction(source: source, destination: destination)).write(to: journal, options: .atomic)
+        do {
+            try FileManager.default.moveItem(at: sourceURL, to: destinationURL)
+            model.name = destination
+            try save(model, at: destinationURL)
+            try FileManager.default.removeItem(at: journal)
+        } catch {
+            throw UVError("Rename interrupted: \(error.localizedDescription). Run uvm repair to recover the recorded operation.")
+        }
     }
 }
 

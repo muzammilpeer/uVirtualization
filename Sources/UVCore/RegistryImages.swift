@@ -106,7 +106,7 @@ public enum RegistryImages {
         var model = try cache.load(image.cacheName)
         for file in try FileManager.default.contentsOfDirectory(at: cache.directory(image.cacheName), includingPropertiesForKeys: nil) {
             try requireRegularFile(file)
-            try FileManager.default.copyItem(at: file, to: stage.appendingPathComponent(file.lastPathComponent))
+            try copyArtifact(from: file, to: stage.appendingPathComponent(file.lastPathComponent))
         }
         model.name = name
         try renewIdentity(model: &model, directory: stage)
@@ -119,7 +119,7 @@ public enum RegistryImages {
               json["version"] as? Int == 1, (json["arch"] as? String ?? "arm64") == "arm64",
               (json["diskFormat"] as? String ?? "raw") == "raw",
               let cpu = json["cpuCount"] as? Int, let memory = json["memorySize"] as? UInt64 else { throw UVError("Unsupported Tart configuration.") }
-        var model = try VMConfiguration(name: name, cpuCount: cpu, memoryMiB: Int(memory / 1_048_576), diskGiB: Int((diskBytes + 1_073_741_823) / 1_073_741_824))
+        var model = try VMConfiguration(name: name, cpuCount: cpu, memoryMiB: Int(memory / 1_048_576), diskGiB: Int((diskBytes + 1_073_741_823) / 1_073_741_824), guest: (json["os"] as? String ?? "darwin") == "linux" ? "linux" : "macOS")
         model.guest = (json["os"] as? String ?? "darwin") == "linux" ? "linux" : "macOS"
         model.state = "ready"
         model.macAddress = json["macAddress"] as? String

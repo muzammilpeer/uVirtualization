@@ -80,6 +80,7 @@ public struct VMStore {
 
     public func list() throws -> [VMConfiguration] {
         guard fm.fileExists(atPath: root.path) else { return [] }
+        try recoverRenames()
         return try fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey])
             .filter { !$0.lastPathComponent.hasPrefix(".") }
             .sorted { $0.lastPathComponent < $1.lastPathComponent }

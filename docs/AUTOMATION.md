@@ -9,6 +9,7 @@ Commands do not prompt for input except explicit `login --password-stdin`. `init
 - `stop` acknowledges shutdown request; poll `status` until `stopped` to wait for completion.
 - Inventory/config/status/manifest results are JSON. Progress and diagnostics go to stderr.
 - Set `UVM_JSON_ERRORS=1` for an `{ "error": "..." }` error line. Host system logs may still appear for windowed AppKit execution; use headless for automation.
+- Set `UVM_LOG_FORMAT=json` for timestamped progress events on stderr.
 - Registry credentials: Keychain, or all three of `UVM_REGISTRY_HOST`, `UVM_REGISTRY_USERNAME`, `UVM_REGISTRY_PASSWORD`. The host must match exactly. Avoid printing these environment values in CI.
 - Generate completions with `uvm completions bash`, `uvm completions zsh` or `uvm completions fish`.
 - `clone REMOTE LOCAL --discard-blobs` reduces cache disk usage; it discards compressed source blobs after each layer is imported. The assembled image remains cached.

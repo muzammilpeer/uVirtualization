@@ -65,3 +65,19 @@ final class SavedStateSafetyTests: XCTestCase {
         XCTAssertThrowsError(try store.delete("vm"))
     }
 }
+
+final class ArtifactCopyTests: XCTestCase {
+    func testCloneWritesDoNotAlterSourceAndCannotOverwrite() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("source")
+        let destination = root.appendingPathComponent("copy")
+        try Data("original".utf8).write(to: source)
+        try copyArtifact(from: source, to: destination)
+        try Data("changed".utf8).write(to: destination)
+        XCTAssertEqual(try String(contentsOf: source), "original")
+        XCTAssertThrowsError(try copyArtifact(from: source, to: destination))
+        XCTAssertEqual(try String(contentsOf: destination), "changed")
+    }
+}

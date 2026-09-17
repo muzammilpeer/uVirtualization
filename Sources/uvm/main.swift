@@ -22,6 +22,10 @@ func run() async throws {
     case "version", "--version":
         guard rest.isEmpty else { throw UVError("version takes no arguments.") }
         print("uvm 0.1.0-dev")
+    case "repair":
+        guard rest.isEmpty else { throw UVError("repair takes no arguments.") }
+        try store.recoverRenames()
+        try printJSON(store.list())
     case "doctor":
         guard rest.isEmpty else { throw UVError("doctor takes no arguments.") }
         let host = HostCapabilities.current()
@@ -56,7 +60,7 @@ func run() async throws {
         try await GuestCommand.execute(address: ip, user: user, arguments: Array(rest.dropFirst(separator + 1)))
     case "completions":
         guard rest.count == 1 else { throw UVError("Usage: uvm completions bash|zsh|fish") }
-        let commands = "create init clone run set get inspect list status login logout ip exec pull push import export prune rename stop pause resume delete fqn doctor version help serve"
+        let commands = "create init clone run set get inspect list status login logout ip exec pull push import export prune rename stop pause resume suspend delete fqn doctor repair version help serve"
         switch rest[0] {
         case "bash": print("complete -W '\(commands)' uvm")
         case "zsh": print("#compdef uvm\n_arguments '1:command:(\(commands))' '*:file:_files'")
@@ -103,7 +107,7 @@ func run() async throws {
         try RegistryCredentials.delete(host: rest[0])
     case "push":
         guard rest.count == 2 else { throw UVError("Usage: uvm push NAME REGISTRY/IMAGE:TAG") }
-        try await RegistryImages.push(store: store, name: rest[0], reference: OCIReference(rest[1])) { message in FileHandle.standardError.write(Data((message + "\n").utf8)) }
+        try await RegistryImages.push(store: store, name: rest[0], reference: OCIReference(rest[1])) { message in UVLog.emit(message) }
     case "prune":
         guard rest == ["--all"] else { throw UVError("Usage: uvm prune --all (removes cached registry data only)") }
         try RegistryImages.prune(store: store)
@@ -115,7 +119,7 @@ func run() async throws {
         try printJSON(manifest)
     case "pull":
         guard rest.count == 1 else { throw UVError("Usage: uvm pull REGISTRY/IMAGE:TAG") }
-        let image = try await RegistryImages.pull(OCIReference(rest[0]), store: store) { message in FileHandle.standardError.write(Data((message + "\n").utf8)) }
+        let image = try await RegistryImages.pull(OCIReference(rest[0]), store: store) { message in UVLog.emit(message) }
         try printJSON(image)
     case "ip":
         let args = try Arguments(rest, values: ["--timeout"])
@@ -131,7 +135,7 @@ func run() async throws {
         let rest = args.positional
         guard rest.count == 2 else { throw UVError("Usage: uvm \(command) SOURCE DESTINATION") }
         if command == "clone", rest[0].contains("/") {
-            try await RegistryImages.clone(OCIReference(rest[0]), store: store, name: rest[1], keepBlobs: args.value("--discard-blobs") == nil) { message in FileHandle.standardError.write(Data((message + "\n").utf8)) }
+            try await RegistryImages.clone(OCIReference(rest[0]), store: store, name: rest[1], keepBlobs: args.value("--discard-blobs") == nil) { message in UVLog.emit(message) }
         } else if command == "clone" { try store.clone(rest[0], to: rest[1]) }
         else { try store.rename(rest[0], to: rest[1]) }
         try printJSON(store.load(rest[1]))
@@ -163,13 +167,16 @@ func run() async throws {
         }
         guard let ipsw = args.value("--from-ipsw") else { throw UVError("Usage: uvm create NAME --from-ipsw PATH|latest") }
         let installer = MacInstaller()
-        signal(SIGINT, SIG_IGN)
-        let interrupt = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
-        interrupt.setEventHandler { installer.cancel() }
-        interrupt.resume()
-        defer { interrupt.cancel() }
+        let interrupts = [SIGINT, SIGTERM].map { number -> DispatchSourceSignal in
+            signal(number, SIG_IGN)
+            let source = DispatchSource.makeSignalSource(signal: number, queue: .main)
+            source.setEventHandler { installer.cancel() }
+            source.resume()
+            return source
+        }
+        defer { interrupts.forEach { $0.cancel() } }
         try await installer.create(store: store, model: model, ipsw: ipsw) { message in
-            FileHandle.standardError.write(Data((message + "\n").utf8))
+            UVLog.emit(message)
         }
         try printJSON(store.load(model.name))
     case "init":
@@ -210,6 +217,7 @@ Usage: uvm COMMAND
   install-rosetta                Install Apple Rosetta support for Linux guests
   create NAME --from-ipsw PATH|latest
                                  Install macOS from a restore image
+  repair                         Recover journaled interrupted renames
   doctor                         Report host capabilities as JSON
   init NAME [--cpu N] [--memory MiB] [--disk GiB]
                                  Create a draft configuration (no guest installed)
@@ -254,6 +262,9 @@ if !["run", "create"].contains(CommandLine.arguments.dropFirst().first ?? "") {
 }
 if CommandLine.arguments.dropFirst().first == "run", !CommandLine.arguments.contains("--headless") {
     NSApplication.shared.run()
+} else if ["run", "create", "serve"].contains(CommandLine.arguments.dropFirst().first ?? "") {
+    // Keep the main thread alive for Apple's virtualization and device event delivery.
+    RunLoop.main.run()
 } else {
     dispatchMain()
 }

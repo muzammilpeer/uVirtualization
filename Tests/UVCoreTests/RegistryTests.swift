@@ -3,6 +3,22 @@ import Compression
 @testable import UVCore
 
 final class RegistryTests: XCTestCase {
+    func testLinuxTartConfigurationAcceptsDecimalGigabyteDisk() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let metadata: [String: Any] = ["version": 1, "os": "linux", "arch": "arm64",
+                                     "cpuCount": 2, "memorySize": 1_073_741_824]
+        try JSONSerialization.data(withJSONObject: metadata).write(to: root.appendingPathComponent("tart.json"))
+        let firmware = Data([1, 2, 3])
+        try firmware.write(to: root.appendingPathComponent("nvram.bin"))
+        let model = try RegistryImages.tartConfiguration(at: root, name: "ubuntu", diskBytes: 20_000_000_000)
+        XCTAssertEqual(model.guest, "linux")
+        XCTAssertEqual(model.diskGiB, 19)
+        XCTAssertEqual(model.memoryMiB, 1024)
+        XCTAssertEqual(model.state, "ready")
+        XCTAssertEqual(try Data(contentsOf: root.appendingPathComponent("efi.bin")), firmware)
+    }
     func testReferenceParsingRejectsPathsAndCredentials() throws {
         XCTAssertEqual(try OCIReference("ghcr.io/cirruslabs/macos-tahoe-base").reference, "latest")
         XCTAssertEqual(try OCIReference("ghcr.io/a/b:v1").repository, "a/b")

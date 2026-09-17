@@ -34,6 +34,6 @@ struct Arguments {
     }
     func model() throws -> VMConfiguration {
         try require(1)
-        return try VMConfiguration(name: positional[0], cpuCount: int("--cpu") ?? 4, memoryMiB: int("--memory") ?? 4096, diskGiB: int("--disk") ?? 64)
+        return try VMConfiguration(name: positional[0], cpuCount: int("--cpu") ?? 4, memoryMiB: int("--memory") ?? 4096, diskGiB: int("--disk") ?? 64, guest: value("--linux") == nil ? "macOS" : "linux")
     }
 }

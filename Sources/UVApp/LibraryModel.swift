@@ -37,7 +37,7 @@ final class LibraryModel: ObservableObject {
         Task {
             defer { busy = false; installer = nil; canCancelInstallation = false; refresh() }
             do {
-                let model = try VMConfiguration(name: name, cpuCount: cpu, memoryMiB: memory, diskGiB: disk)
+                let model = try VMConfiguration(name: name, cpuCount: cpu, memoryMiB: memory, diskGiB: disk, guest: linux ? "linux" : "macOS")
                 if linux { try LinuxInstaller.create(store: store, model: model) }
                 else {
                     let installer = MacInstaller()

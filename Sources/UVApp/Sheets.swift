@@ -11,7 +11,7 @@ struct CreateSheet: View {
     @State private var cpu = 4
     @State private var memory = 4096
     @State private var disk = 64
-    var valid: Bool { (try? VMConfiguration(name: name, cpuCount: cpu, memoryMiB: memory, diskGiB: disk)) != nil }
+    var valid: Bool { (try? VMConfiguration(name: name, cpuCount: cpu, memoryMiB: memory, diskGiB: disk, guest: linux ? "linux" : "macOS")) != nil }
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             Text("Create Virtual Machine").font(.title.bold())
@@ -30,8 +30,8 @@ struct CreateSheet: View {
                     Text("Use “latest” to download Apple's compatible restore image.").font(.caption).foregroundStyle(.secondary)
                 }
                 Stepper("CPU: \(cpu) cores", value: $cpu, in: 1...ProcessInfo.processInfo.processorCount)
-                Stepper("Memory: \(memory) MiB", value: $memory, in: 4096...65536, step: 1024)
-                Stepper("Disk: \(disk) GiB", value: $disk, in: 20...1024, step: 4)
+                Stepper("Memory: \(memory) MiB", value: $memory, in: (linux ? 512 : 4096)...65536, step: 512)
+                Stepper("Disk: \(disk) GiB", value: $disk, in: (linux ? 1 : 20)...1024, step: 1)
             }
             Text(linux ? "After creation, choose Run with ISO and select an ARM64 Linux installer." : "Installation can take several minutes and requires space for the restore image and guest disk.")
                 .font(.callout).foregroundStyle(.secondary)

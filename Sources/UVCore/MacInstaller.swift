@@ -3,14 +3,16 @@ import Virtualization
 
 @MainActor
 public final class MacInstaller {
+    private var cancelled = false
     private var installer: VZMacOSInstaller?
     private var downloadTask: Task<URL, Error>?
     public init() {}
-    public func cancel() { installer?.progress.cancel(); downloadTask?.cancel() }
+    public func cancel() { cancelled = true; installer?.progress.cancel(); downloadTask?.cancel() }
 
     public func create(store: VMStore, model: VMConfiguration, ipsw: String,
                        progress: @escaping (String) -> Void) async throws {
         #if arch(arm64)
+        cancelled = false
         guard VZVirtualMachine.isSupported else { throw UVError("Virtualization is unavailable. Build and sign using scripts/sign.sh, then run .build/debug/uvm.") }
         let lock = try store.lock(model.name)
         defer { lock.unlock() }
@@ -32,7 +34,9 @@ public final class MacInstaller {
                 imageURL = try await task.value
                 downloadTask = nil
             }
+            if cancelled { throw CancellationError() }
             let image = try await VZMacOSRestoreImage.image(from: imageURL)
+            if cancelled { throw CancellationError() }
             guard let requirements = image.mostFeaturefulSupportedConfiguration else { throw UVError("This restore image is incompatible with the host.") }
             var ready = model
             ready.minimumCPUCount = requirements.minimumSupportedCPUCount
@@ -54,6 +58,7 @@ public final class MacInstaller {
                 progress("Installing macOS: \(Int(p.fractionCompleted * 100))%")
             }
             defer { observation.invalidate() }
+            if cancelled { throw CancellationError() }
             try await installer.install()
             ready.state = "ready"
             try store.save(ready, at: stage)
@@ -62,6 +67,7 @@ public final class MacInstaller {
             progress("Installation complete")
         } catch {
             try? Data(error.localizedDescription.utf8).write(to: stage.appendingPathComponent("failure.txt"), options: .atomic)
+            if cancelled || error is CancellationError { progress("Cancelled. Incomplete installation retained at \(stage.path)."); throw CancellationError() }
             throw UVError("\(error.localizedDescription)\nIncomplete installation retained at \(stage.path).")
         }
         #else

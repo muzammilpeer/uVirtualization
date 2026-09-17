@@ -16,8 +16,11 @@ public actor RegistryClient {
     public let reference: OCIReference
     private var token: String?
     private let pushAccess: Bool
-    private let session = URLSession(configuration: .ephemeral, delegate: RegistryRedirects(), delegateQueue: nil)
-    public init(reference: OCIReference, pushAccess: Bool = false) { self.reference = reference; self.pushAccess = pushAccess }
+    private let session: URLSession
+    public init(reference: OCIReference, pushAccess: Bool = false, session: URLSession? = nil) {
+        self.reference = reference; self.pushAccess = pushAccess
+        self.session = session ?? URLSession(configuration: .ephemeral, delegate: RegistryRedirects(), delegateQueue: nil)
+    }
 
     private func request(_ url: URL, method: String = "GET") -> URLRequest {
         var request = URLRequest(url: url)

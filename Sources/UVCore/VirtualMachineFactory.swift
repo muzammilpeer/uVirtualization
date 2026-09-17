@@ -6,6 +6,9 @@ public enum VirtualMachineFactory {
     public static func configuration(_ model: VMConfiguration, directory: URL, options: RuntimeOptions = RuntimeOptions()) throws -> VZVirtualMachineConfiguration {
         try model.validate()
         guard VZVirtualMachine.isSupported else { throw UVError("Virtualization is unavailable. Run the signed binary on an Apple silicon host.") }
+        for artifact in model.guest == "macOS" ? ["disk.img", "hardware.bin", "machine.bin", "nvram.bin"] : ["disk.img", "efi.bin"] {
+            try requireRegularFile(directory.appendingPathComponent(artifact))
+        }
         let config = VZVirtualMachineConfiguration()
         guard model.cpuCount >= max(model.minimumCPUCount ?? 1, VZVirtualMachineConfiguration.minimumAllowedCPUCount),
               model.cpuCount <= VZVirtualMachineConfiguration.maximumAllowedCPUCount else { throw UVError("CPU count is outside guest/host limits.") }

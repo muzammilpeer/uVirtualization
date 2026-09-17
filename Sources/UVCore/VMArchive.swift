@@ -80,7 +80,7 @@ public enum VMArchive {
                 guard let bytes = try input.read(upToCount: Int(min(remaining, 4 * 1024 * 1024))), !bytes.isEmpty else { throw UVError("Truncated archive data.") }
                 hash.update(data: bytes)
                 offset += UInt64(bytes.count)
-                if bytes.allSatisfy({ $0 == 0 }) { try output.seek(toOffset: offset) }
+                if bytes == Data(count: bytes.count) { try output.seek(toOffset: offset) }
                 else { try output.write(contentsOf: bytes) }
                 remaining -= UInt64(bytes.count)
             }

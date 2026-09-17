@@ -9,9 +9,9 @@ Work sequentially. Each sprint ends with build/test evidence and an honest statu
 | 03 | Runtime and VM window | Boot, interact, graceful/force stop, ownership lock and status verified on hardware | Implemented; guest acceptance pending |
 | 04 | Local operations | Offline configure/clone/rename/delete, sparse disk growth, archive safety | Implemented; guest acceptance pending |
 | 05 | Network and devices | NAT/IP, directory sharing, display/audio, bridged capability checks | Implemented; guest acceptance pending |
-| 06 | OCI pull and compatibility | Verify digest, stream layers, clone and boot a pinned Tart image | Implemented; registry boot acceptance pending |
+| 06 | OCI pull and compatibility | Verify digest, stream layers, clone and boot a pinned Tart image | Pinned Tahoe import/runtime/NAT/control checks passed; guest display acceptance pending |
 | 07 | OCI publishing and cache | Keychain auth, push, retries, cancellation, prune under concurrent use | Implemented; private registry acceptance pending |
-| 08 | ARM Linux | ISO install, EFI persistence, serial console, guest-specific devices | Implemented; distribution install acceptance pending |
+| 08 | ARM Linux | ISO install, EFI persistence, serial console, guest-specific devices | Ubuntu OCI import/runtime/NAT passed; fresh ISO installation acceptance pending |
 | 09 | Native app | Shared library, wizard, settings, VM windows, lifecycle errors | Implemented; UI acceptance partially verified |
 | 10 | Automation and parity audit | Version-pinned Tart command matrix, JSON/completions, CI examples; close gaps | Automation implemented; parity gaps documented |
 | 11 | Release engineering | M1 hardware suite, signed/notarized artifacts, Homebrew recipe and upgrade tests | Development packaging complete; release gates deferred/open |
@@ -78,3 +78,9 @@ Produced an optimized development-signed application ZIP, SHA-256 checksum and g
 ## Sprint 12 extension foundation — 2026-09-16
 
 Implemented a token-protected loopback HTTP API for inventory, host diagnostics and lifecycle control. Token permissions, authentication, request framing, connection bounds and shutdown behavior are documented. Twenty-four unit tests pass. Live loopback smoke verifies authenticated inventory and rejection of invalid tokens. The original open-ended 12+ backlog is now separated into this deliverable and a future multi-host product specification; orchestration/pools are not claimed complete.
+
+## Cross-sprint reliability and guest acceptance — 2026-09-17
+
+Added journaled interrupted-rename recovery, explicit APFS cloning with filesystem fallback, structured progress logging, host-model diagnostics, regular-file checks and installer cancellation handling. Registry upload tests cover chunk submission, digest commit and rejection of cross-origin upload locations. Linux validation now handles smaller guests and decimal-GB registry disks consistently in the CLI, app and Tart adapter. Both termination signals cancel macOS installation.
+
+All 31 unit tests and 26 CLI checks pass; signed low-resource Linux creation and the authenticated API smoke pass. Real pinned Tahoe and public Ubuntu OCI imports succeed. Tahoe passes runtime start, NAT lease, pause, resume and force stop. Ubuntu also reaches SSH service readiness and passes pause/resume, but its graceful shutdown test times out after 120 seconds; cleanup force-stops it. Apple saved-state persistence returns permission denied and macOS graceful shutdown remains unresolved. These are open acceptance items, not completed exits. The optimized development package and Homebrew formula are regenerated; final production signing remains deferred by the user.

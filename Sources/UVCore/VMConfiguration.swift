@@ -20,10 +20,10 @@ public struct VMConfiguration: Codable, Equatable {
     public var minimumCPUCount: Int?
     public var minimumMemoryMiB: Int?
 
-    public init(name: String, cpuCount: Int = 4, memoryMiB: Int = 4096, diskGiB: Int = 64) throws {
+    public init(name: String, cpuCount: Int = 4, memoryMiB: Int = 4096, diskGiB: Int = 64, guest: String = "macOS") throws {
         self.schemaVersion = 1
         self.name = name
-        self.guest = "macOS"
+        self.guest = guest
         self.cpuCount = cpuCount
         self.memoryMiB = memoryMiB
         self.diskGiB = diskGiB
@@ -44,8 +44,14 @@ public struct VMConfiguration: Codable, Equatable {
         guard schemaVersion == 1 else { throw UVError("Unsupported configuration version \(schemaVersion).") }
         guard ["macOS", "linux"].contains(guest), ["draft", "ready"].contains(state) else { throw UVError("Unsupported guest or configuration state.") }
         guard (1...1024).contains(cpuCount) else { throw UVError("CPU count must be between 1 and 1024.") }
-        guard (4096...16_777_216).contains(memoryMiB) else { throw UVError("Memory must be between 4096 and 16777216 MiB.") }
-        guard (20...1_048_576).contains(diskGiB) else { throw UVError("Disk must be between 20 and 1048576 GiB.") }
+        guard ((guest == "macOS" ? 4096 : 512)...16_777_216).contains(memoryMiB) else { throw UVError("Memory must meet the guest minimum (macOS: 4096 MiB; Linux: 512 MiB) and not exceed 16777216 MiB.") }
+        let minimumDiskGiB = guest == "macOS" ? 20 : 1
+        guard (minimumDiskGiB...1_048_576).contains(diskGiB) else { throw UVError("Disk must be between \(minimumDiskGiB) and 1048576 GiB for \(guest).") }
+        if let address = macAddress {
+            guard address.range(of: "^(?:[a-fA-F0-9]{2}:){5}[a-fA-F0-9]{2}$", options: .regularExpression) != nil else { throw UVError("Invalid MAC address.") }
+        }
+        if let minimumCPUCount { guard (1...1024).contains(minimumCPUCount) else { throw UVError("Invalid minimum CPU count.") } }
+        if let minimumMemoryMiB { guard (1...16_777_216).contains(minimumMemoryMiB) else { throw UVError("Invalid minimum memory.") } }
         guard (640...8192).contains(displayWidth), (480...8192).contains(displayHeight) else {
             throw UVError("Invalid display dimensions.")
         }
