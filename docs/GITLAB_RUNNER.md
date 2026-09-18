@@ -62,3 +62,13 @@ uvm ready ci-vm --user builder \
 ## Local verification — 2026-09-17
 
 44 unit tests, 26 CLI smoke checks, `scripts/gitlab-contract-smoke.py` and the real `scripts/gitlab-hardware-smoke.py` negative path passed. Tests cover consecutive network successes, timeouts, absent DHCP data, shell/endpoint validation, trusted job identity, unique job MACs, interrupted preparation, transport versus exit-255 build failures and cleanup ownership. The real test intentionally supplies no valid SSH trust: checkout is rejected while the detached Ubuntu clone stays running, then cleanup deletes it and preserves its base. This does not claim a successful live GitLab checkout or guest Internet test. The user has offered to register the runner for that next step.
+
+## Live setup checkpoint — 2026-09-18
+
+The user registered a custom runner tagged `uvm` for `https://gitlab.muzammilpeer.uk/muzammilpeer/uvirtualization-test/`. Local project: `/Users/muzammilpeer/Git/uvm-test`. Registration exists in the user's GitLab Runner configuration, but the custom driver command is still empty; do not treat registration as completed executor setup.
+
+Commit `f204861` in the test repository adds checkout/HTTPS verification, artifact transfer and an unsigned iOS build. Its `iOSTemplate` build command passes on the host with Xcode 27, Swift 5 language mode and deployment target 15.0. This is local build validation, not a GitLab or guest pass. Git authentication is unavailable, so that commit has not been pushed and no pipeline has been run.
+
+A separate `ci-base` clone was created in `.build/registry-acceptance`, preserving `tahoe-base`. Its SSH host public key was obtained from the stopped image's data volume; the image was then detached before boot. Dedicated local CI key files and an actual executor configuration are in ignored `.build/gitlab-live`. The guest was booted with narrowly scoped read-only provisioning shares and obtained a NAT lease. Guest login/provisioning is pending explicit authorization for the upstream image's documented default account. The clone is stopped while waiting. No default-credential login was executed and no runner token was printed or changed.
+
+Next: finish guest provisioning, verify authenticated guest HTTPS, install the prepared driver configuration while preserving the runner token, push the test-project commit through an authenticated Git session, and observe both pipeline jobs and clone cleanup.

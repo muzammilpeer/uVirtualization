@@ -26,7 +26,7 @@ Date: 2026-09-17. Host reports arm64, 10 CPUs, 16 GiB RAM, macOS 27.0 build 26A4
 | Release packaging | Optimized development ZIP, signature, checksum and formula syntax passed |
 | GitLab executor contract | Config/prepare/run/cleanup, readiness failure, transport/build exit distinction, job isolation and interrupted prepare tests passed |
 | GitLab hardware negative test | Real Ubuntu job clone survives prepare exit; missing SSH trust blocks checkout; cleanup and repeated cleanup preserve base |
-| Live GitLab pipeline | Pending user runner registration and guest SSH provisioning |
+| Live GitLab pipeline | Runner registered; driver/guest provisioning and Git authentication pending. Test-project pipeline committed locally; host iOS build passed. No live pipeline yet. |
 | Notarization/publication | Deferred by user until final build |
 
 Scripts: `scripts/check.sh`, `scripts/cli-smoke.py`, `scripts/hardware-smoke.py`, `scripts/api-smoke.py` and `scripts/imported-guest-smoke.py --store PATH --name NAME [--graceful]`. Imported-guest checks require an explicitly selected disposable guest and verify runtime state and DHCP lease; they do not assert desktop/input or guest application health. Hardware scripts use isolated `.build` stores. CLI tests use temporary stores and never alter the default inventory.
