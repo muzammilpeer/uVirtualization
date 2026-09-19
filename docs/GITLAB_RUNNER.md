@@ -72,3 +72,9 @@ Commit `f204861` in the test repository adds checkout/HTTPS verification, artifa
 A separate `ci-base` clone was created in `.build/registry-acceptance`, preserving `tahoe-base`. Its SSH host public key was obtained from the stopped image's data volume; the image was then detached before boot. Dedicated local CI key files and an actual executor configuration are in ignored `.build/gitlab-live`. The guest was booted with narrowly scoped read-only provisioning shares and obtained a NAT lease. Guest login/provisioning is pending explicit authorization for the upstream image's documented default account. The clone is stopped while waiting. No default-credential login was executed and no runner token was printed or changed.
 
 Next: finish guest provisioning, verify authenticated guest HTTPS, install the prepared driver configuration while preserving the runner token, push the test-project commit through an authenticated Git session, and observe both pipeline jobs and clone cleanup.
+
+## Runner configuration repair — 2026-09-19
+
+A real pipeline failed before provisioning with `custom executor is missing RunExec`. Inspection confirmed the registered runner had only `run_exec = ""`. The active `~/.gitlab-runner/config.toml` now points all four custom stages to the packaged `gitlab-uvm-executor`, uses Bash, and defines guest build/cache directories and stage timeouts. The existing registration token was preserved and a private backup retained next to the configuration.
+
+The driver config stage passed, GitLab registration verification passed, and the runner service is running with the repaired configuration. Keep executor `custom`; runner registration alone does not install these driver hooks. Guest SSH/tool provisioning still needs completion before a successful live pipeline is expected. No guest login or pipeline pass is claimed by this configuration repair.
