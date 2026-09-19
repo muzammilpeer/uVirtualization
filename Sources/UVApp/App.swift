@@ -26,6 +26,9 @@ struct UVApplication: App {
                 Button("Choose VM Storage…") {
                     let panel = NSOpenPanel()
                     panel.canChooseDirectories = true; panel.canChooseFiles = false
+                    panel.showsHiddenFiles = true
+                    panel.allowsMultipleSelection = false
+                    panel.directoryURL = library.store.root
                     if panel.runModal() == .OK, let url = panel.url { library.chooseStorage(url) }
                 }
             }
