@@ -75,3 +75,43 @@ final class GuestResourceTests: XCTestCase {
         XCTAssertThrowsError(try model.validate())
     }
 }
+
+final class StorageSelectionTests: XCTestCase {
+    func testSelectingVMFolderOpensItsLibraryAndSelectsVM() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = VMStore(root: root)
+        try store.create(VMConfiguration(name: "ci-base"))
+        let directory = try store.directory("ci-base")
+        try Data([0]).write(to: directory.appendingPathComponent("disk.img"))
+        let selection = try VMStore.resolveSelection(directory)
+        XCTAssertEqual(selection.store.root.path, store.root.path)
+        XCTAssertEqual(selection.vmName, "ci-base")
+        XCTAssertEqual(try selection.store.list().map(\.name), ["ci-base"])
+        let library = try VMStore.resolveSelection(root)
+        XCTAssertNil(library.vmName)
+        XCTAssertEqual(library.store.root.path, store.root.path)
+    }
+    func testLibraryIgnoresOrdinaryFilesButRejectsInvalidVMConfig() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = VMStore(root: root)
+        try store.create(VMConfiguration(name: "ci-base"))
+        try Data("notes".utf8).write(to: root.appendingPathComponent("notes.txt"))
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("other folder"), withIntermediateDirectories: false)
+        XCTAssertEqual(try store.list().map(\.name), ["ci-base"])
+        try Data("broken".utf8).write(to: store.directory("ci-base").appendingPathComponent("config.json"))
+        XCTAssertThrowsError(try store.list())
+        XCTAssertThrowsError(try VMStore.resolveSelection(store.directory("ci-base")))
+    }
+    func testSelectingSymlinkOrFileIsRejected() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = VMStore(root: root)
+        try store.create(VMConfiguration(name: "ci-base"))
+        let alias = root.appendingPathComponent("alias")
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: store.directory("ci-base"))
+        XCTAssertThrowsError(try VMStore.resolveSelection(alias))
+        XCTAssertThrowsError(try VMStore.resolveSelection(store.directory("ci-base").appendingPathComponent("config.json")))
+    }
+}

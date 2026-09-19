@@ -29,6 +29,7 @@ struct UVApplication: App {
                     panel.showsHiddenFiles = true
                     panel.allowsMultipleSelection = false
                     panel.directoryURL = library.store.root
+                    panel.message = "Choose a VM library folder or an individual VM folder."
                     if panel.runModal() == .OK, let url = panel.url { library.chooseStorage(url) }
                 }
             }

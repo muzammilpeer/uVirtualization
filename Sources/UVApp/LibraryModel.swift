@@ -19,9 +19,19 @@ final class LibraryModel: ObservableObject {
 
     func chooseStorage(_ url: URL) {
         guard !hasActiveWork else { error = "Stop active VMs and finish installation before changing storage."; return }
-        store = VMStore(root: url)
-        selection = nil
-        refresh()
+        do {
+            let resolved = try VMStore.resolveSelection(url)
+            let machines = try resolved.store.list()
+            var statuses: [String: String] = [:]
+            for machine in machines {
+                statuses[machine.name] = try RuntimeControl.status(store: resolved.store, name: machine.name).state
+            }
+            store = resolved.store
+            self.machines = machines
+            self.statuses = statuses
+            selection = resolved.vmName
+            error = nil
+        } catch { self.error = error.localizedDescription }
     }
     func refresh() {
         do {

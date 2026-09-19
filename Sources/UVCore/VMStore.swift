@@ -1,11 +1,26 @@
 import Foundation
 
-/// Draft-only store. Boot artifacts and runtime ownership are introduced separately.
+/// Shared VM library, configuration and runtime ownership storage.
 public struct VMStore {
     public let root: URL
     private let fm = FileManager.default
 
     public init(root: URL) { self.root = root.standardizedFileURL }
+
+    /// A picker may select either the library or a VM bundle inside it.
+    public static func resolveSelection(_ url: URL) throws -> (store: VMStore, vmName: String?) {
+        let directory = url.standardizedFileURL
+        let values = try directory.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+        guard values.isDirectory == true, values.isSymbolicLink != true else {
+            throw UVError("Choose a VM library folder or a VM folder, not a file or symbolic link.")
+        }
+        if FileManager.default.fileExists(atPath: directory.appendingPathComponent("config.json").path) {
+            let store = VMStore(root: directory.deletingLastPathComponent())
+            let model = try store.load(directory.lastPathComponent)
+            return (store, model.name)
+        }
+        return (VMStore(root: directory), nil)
+    }
 
     public static var defaultRoot: URL {
         if let path = ProcessInfo.processInfo.environment["UVM_HOME"], !path.isEmpty {
@@ -81,8 +96,13 @@ public struct VMStore {
     public func list() throws -> [VMConfiguration] {
         guard fm.fileExists(atPath: root.path) else { return [] }
         try recoverRenames()
-        return try fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey])
-            .filter { !$0.lastPathComponent.hasPrefix(".") }
+        return try fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+            .filter { url in
+                guard !url.lastPathComponent.hasPrefix(".") else { return false }
+                let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+                guard values.isDirectory == true || values.isSymbolicLink == true else { return false }
+                return fm.fileExists(atPath: url.appendingPathComponent("config.json").path)
+            }
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
             .map { try load($0.lastPathComponent) }
     }
